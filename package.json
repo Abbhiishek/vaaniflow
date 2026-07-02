@@ -30,7 +30,8 @@
     "publish": {
       "provider": "github",
       "owner": "Abbhiishek",
-      "repo": "vaaniflow"
+      "repo": "vaaniflow",
+      "releaseType": "release"
     },
     "win": {
       "target": "nsis",
