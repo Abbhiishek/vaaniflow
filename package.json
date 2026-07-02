@@ -1,0 +1,52 @@
+{
+  "name": "vaaniflow",
+  "productName": "VaaniFlow",
+  "version": "1.0.0",
+  "description": "Voice dictation for Windows — a Wispr Flow style client for your self-hosted Whisper (LocalAI) server.",
+  "main": "src/main/main.js",
+  "author": "Abhishek Kushwaha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abbhiishek/vaaniflow.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "icons": "node scripts/gen-icons.js",
+    "dist": "npm run icons && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.vaani.flow",
+    "productName": "VaaniFlow",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/uiohook-napi/**"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "Abbhiishek",
+      "repo": "vaaniflow"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "runAfterFinish": true
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
+  }
+}
