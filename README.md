@@ -42,17 +42,44 @@ toggle in Settings → Behavior).
 
 ## Dashboard
 
-- **Home** — words dictated, dictation count, average words/minute, day streak, recent transcripts
-- **History** — searchable transcript log with copy/delete
-- **Settings** — server, dictionary, microphone, hotkey, behavior toggles, launch at startup
+- **Home** — your past dictations: searchable, day-grouped, copy/delete
+- **Insights** — words dictated, dictations, avg words/min, day streak, a GitHub-style
+  activity heatmap, 14-day trend, and desktop usage (which apps you dictate into)
+- **Dictionary** — VaaniFlow learns your unique words automatically (proper nouns,
+  acronyms, camelCase seen 3+ times) or manually; plus correction rules
+- **Style** — default tone, free-form style instructions for the AI polish stage,
+  and per-app tone profiles
+- **Snippets** — spoken trigger phrases that insert saved text
+- **Settings** — server, AI polish model, microphone, hotkey, behavior, startup
+
+## Local-first
+
+VaaniFlow is a local-first app: there is no account, no sign-in, and no cloud backend.
+Transcripts, settings, dictionary, and snippets live as JSON in `%APPDATA%/vaaniflow`.
+The only network calls the app makes are to the servers **you** configure: the Whisper
+transcription endpoint and (optionally) the AI-polish endpoint.
 
 ## AI polish (optional)
 
-Add a chat model to the same LocalAI server (e.g. `qwen2.5-3b-instruct`) and set it in
-Settings → AI polish. Every transcript is then cleaned by the LLM: filler words removed,
-self-corrections resolved ("Tuesday, no wait, Wednesday" → "Wednesday"), punctuation
-fixed. Tone can be set globally or per app ("slack" → casual, "outlook" → formal).
-The stage fails open — if the model is slow or down, the raw transcript is used.
+Set a chat model in Settings → AI polish and every transcript is cleaned by an LLM:
+filler words removed, self-corrections resolved ("Tuesday, no wait, Wednesday" →
+"Wednesday"), punctuation fixed. Tone can be set globally or per app ("slack" → casual,
+"outlook" → formal).
+
+The polish stage can run on a **different provider** than Whisper — any
+OpenAI-compatible `/v1/chat/completions` endpoint. Recommended setups:
+
+- **Fast hosted (best experience)** — Groq (`llama-3.1-8b-instant`) or Cerebras
+  (`llama3.1-8b`): ~1000+ tokens/s means polish finishes in well under a second.
+  Set "Polish endpoint" to e.g. `https://api.groq.com/openai` with its own API key.
+- **Same LocalAI server** — leave the endpoint empty and add a small chat model
+  next to Whisper (`qwen2.5-3b-instruct`, `llama-3.2-3b-instruct`); on CPU expect
+  a few seconds of polish for long dictations.
+
+The stage fails open *and fast*: output is validated (truncation, runaway or
+unrelated replies are rejected) and a configurable deadline (default 8 s) caps how
+long polishing may take — past it, the raw transcript is pasted. The polish
+endpoint's connection is warmed up while you're still speaking.
 
 ## Voice commands & snippets
 
@@ -75,13 +102,21 @@ Ctrl+V, and tone profiles pick the right register for the polish stage.
 - **Corrections** — find→replace rules applied to every transcript for words the model
   consistently gets wrong.
 - **Artifact cleanup** — whisper.cpp noise markers (`[BLANK_AUDIO]`, `(laughs)`, `♪…♪`)
-  are stripped automatically.
+  and classic silence hallucinations ("thanks for watching", "subtitles by …") are
+  stripped automatically.
 - **Fast mode** (default on) — long dictations are cut at natural pauses and transcribed
   in the background *while you keep speaking*; on stop, only the last few seconds still
   need processing. Each chunk gets the previous chunk's tail as context so boundaries
   stay coherent.
-- Silence is trimmed before upload and the server connection is warmed up the moment
-  recording starts.
+- **Adaptive silence detection** — the pause detector tracks your room's ambient noise
+  level, so chunk cuts and silence trimming keep working in noisy rooms and with quiet
+  microphones.
+- **Resilient** — transient server errors (network blips, timeouts, 5xx) are retried
+  once; if a dictation still fails, its audio is saved to
+  `%APPDATA%/vaaniflow/failed-audio/` so your words are never lost.
+- Silence is trimmed before upload and the server connection (transcription *and*
+  polish) is warmed up the moment recording starts. Each history entry records
+  per-stage latency (transcribe / polish / paste) so you can see where time goes.
 
 The app lives in the system tray; closing the dashboard keeps dictation active.
 

@@ -1,11 +1,18 @@
 :root {
-  --bg: #0f1011;
-  --bg-raised: #151619;
-  --bg-hover: #1b1c20;
+  /* surfaces carry their alpha via variables so the acrylic transparency
+     setting can let the desktop show through (JS sets --bg-alpha) */
+  --bg-rgb: 15, 16, 17;
+  --surface-rgb: 21, 22, 25;
+  --hover-rgb: 27, 28, 32;
+  --bg-alpha: 1;
+  --surface-alpha: 1;
+  --bg: rgba(var(--bg-rgb), var(--bg-alpha));
+  --bg-raised: rgba(var(--surface-rgb), var(--surface-alpha));
+  --bg-hover: rgba(var(--hover-rgb), min(1, calc(var(--surface-alpha) + 0.06)));
   --border: rgba(255, 255, 255, 0.07);
   --text: #e9eaec;
   --text-dim: #8f9297;
-  --accent: #e8e9eb;        /* light-on-dark primary actions */
+  --accent: #e8e9eb;        /* light-on-dark primary actions; user-configurable */
   --accent-text: #101113;   /* text on top of --accent */
   --accent-hover: #ffffff;
   --focus: rgba(255, 255, 255, 0.28);
@@ -14,6 +21,10 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* the hidden attribute must always win — author display rules (e.g. the
+   update banner's flex) silently override the browser's [hidden] otherwise */
+[hidden] { display: none !important; }
 
 html, body {
   height: 100%;
@@ -79,7 +90,8 @@ html, body {
 .nav-item:hover { background: var(--bg-hover); color: var(--text); }
 .nav-item.active { background: var(--bg-hover); color: var(--text); }
 
-#sidebar-footer { margin-top: auto; }
+#sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+#sidebar-divider { height: 1px; background: var(--border); margin: 10px 4px; }
 #btn-dictate {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%;
@@ -94,8 +106,14 @@ html, body {
 
 /* ---------------- content ---------------- */
 #content { flex: 1; overflow-y: auto; padding: 28px 36px; }
-.view { display: none; max-width: 860px; }
+.view { display: none; }
 .view.active { display: block; }
+/* data views (Home, Insights) use the full window; form pages sit centered
+   at a readable width */
+#view-dictionary, #view-style, #view-snippets, #view-settings {
+  max-width: 980px;
+  margin: 0 auto;
+}
 
 h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
 h2 { font-size: 15px; font-weight: 600; }
@@ -120,6 +138,77 @@ h2 { font-size: 15px; font-weight: 600; }
   gap: 14px;
   margin-top: 14px;
 }
+
+#heatmap-card { margin-top: 14px; }
+
+/* cells stretch so the grid always fills the card, whatever the window width */
+#heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+  padding-bottom: 4px;
+}
+#heatmap i {
+  width: 100%; height: auto;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: #1d1e22;
+}
+#heatmap-legend i {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  background: #1d1e22;
+}
+/* levels are tinted by the user's primary color; the default neutral accent
+   reproduces the original grayscale ramp */
+#heatmap i[data-level="1"], #heatmap-legend i[data-level="1"] { background: color-mix(in srgb, var(--accent) 18%, #1d1e22); }
+#heatmap i[data-level="2"], #heatmap-legend i[data-level="2"] { background: color-mix(in srgb, var(--accent) 40%, #1d1e22); }
+#heatmap i[data-level="3"], #heatmap-legend i[data-level="3"] { background: color-mix(in srgb, var(--accent) 65%, #1d1e22); }
+#heatmap i[data-level="4"], #heatmap-legend i[data-level="4"] { background: color-mix(in srgb, var(--accent) 92%, #1d1e22); }
+
+#heatmap-legend {
+  display: flex; align-items: center; gap: 4px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  color: var(--text-dim); font-size: 10.5px;
+}
+#heatmap-legend span { margin: 0 4px; }
+
+/* ---------------- dictionary suggestions ---------------- */
+#suggestion-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 6px 5px 12px;
+  font-size: 13px;
+}
+.chip-count { color: var(--text-dim); font-size: 11px; }
+.chip-btn {
+  width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  font-size: 13px; font-family: inherit;
+  cursor: pointer;
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.chip-btn.accept:hover { background: var(--accent); color: var(--accent-text); }
+.chip-btn.dismiss:hover { background: rgba(217, 138, 138, 0.2); color: var(--danger); }
+
+code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 11.5px;
+}
 .insight-card {
   background: var(--bg-raised);
   border: 1px solid var(--border);
@@ -130,15 +219,15 @@ h2 { font-size: 15px; font-weight: 600; }
 
 #chart { display: flex; align-items: flex-end; gap: 5px; height: 92px; }
 .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
-.chart-bar { width: 100%; background: #303237; border-radius: 3px; min-height: 2px; transition: background 0.12s ease; }
-.chart-col:hover .chart-bar { background: #4a4d53; }
+.chart-bar { width: 100%; background: color-mix(in srgb, var(--accent) 28%, #26272b); border-radius: 3px; min-height: 2px; transition: background 0.12s ease; }
+.chart-col:hover .chart-bar { background: color-mix(in srgb, var(--accent) 50%, #26272b); }
 .chart-col.today .chart-bar { background: var(--accent); }
 .chart-day { font-size: 9.5px; color: var(--text-dim); }
 
 .app-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
 .app-row .app-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-row .app-words { color: var(--text-dim); font-size: 12px; }
-.app-bar { height: 3px; background: #303237; border-radius: 2px; margin-top: 3px; }
+.app-bar { height: 3px; background: color-mix(in srgb, var(--accent) 35%, #26272b); border-radius: 2px; margin-top: 3px; }
 .insight-empty { color: var(--text-dim); font-size: 12.5px; padding: 12px 0; }
 
 /* ---------------- stats ---------------- */
@@ -146,6 +235,12 @@ h2 { font-size: 15px; font-weight: 600; }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
+}
+#savings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 14px;
 }
 .stat-card {
   background: var(--bg-raised);
@@ -156,6 +251,30 @@ h2 { font-size: 15px; font-weight: 600; }
 }
 .stat-value { font-size: 26px; font-weight: 650; }
 .stat-label { color: var(--text-dim); font-size: 12px; }
+.stat-sub { color: var(--text-dim); font-size: 11px; }
+
+/* top words / needs-work lists */
+.word-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+.word-row .word-rank { color: var(--text-dim); font-size: 11.5px; width: 18px; flex: 0 0 auto; }
+.word-row .word-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.word-row .word-count { color: var(--text-dim); font-size: 12px; }
+.word-bar { height: 3px; background: color-mix(in srgb, var(--accent) 35%, #26272b); border-radius: 2px; margin-top: 3px; }
+
+/* appearance controls */
+.label-hint { color: var(--text-dim); font-size: 12px; }
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+  margin-top: 8px;
+}
+input[type='color'] {
+  width: 52px; height: 30px;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
 
 /* ---------------- transcript list ---------------- */
 .transcript-list { display: flex; flex-direction: column; gap: 10px; }
@@ -189,9 +308,11 @@ h2 { font-size: 15px; font-weight: 600; }
 .empty-state { color: var(--text-dim); text-align: center; padding: 48px 0; }
 .empty-hint { font-size: 12.5px; margin-top: 6px; }
 
+.feed-tools { margin-bottom: 14px; }
+.feed-tools .danger-btn { flex: 0 0 auto; }
+
 #search {
-  width: 100%;
-  margin-bottom: 14px;
+  flex: 1;
   padding: 10px 14px;
   background: var(--bg-raised);
   border: 1px solid var(--border);
@@ -326,20 +447,18 @@ h2 { font-size: 15px; font-weight: 600; }
 .toggle input:checked + span::after { transform: translateX(14px); background: var(--accent-text); }
 
 /* ---------------- update banner ---------------- */
+/* lives in the sidebar footer, below Settings */
 #update-banner {
-  position: fixed;
-  bottom: 18px; right: 18px;
-  display: flex; align-items: center; gap: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 6px;
   background: var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 12px 10px 16px;
-  font-size: 12.5px;
-  color: var(--text);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
-  z-index: 20;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
 }
-#update-banner .primary-btn { padding: 7px 13px; font-size: 12px; }
+#update-banner .primary-btn { padding: 7px 10px; font-size: 12px; width: 100%; }
 
 /* ---------------- toast ---------------- */
 #toast {

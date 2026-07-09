@@ -211,7 +211,8 @@ class Injector {
     const result = await this._send(shiftPaste ? 'pastesh' : 'paste');
     if (restoreClipboard) {
       setTimeout(() => {
-        try { clipboard.writeText(previous); } catch {}
+        // don't clobber something the user copied in the meantime
+        try { if (clipboard.readText() === text) clipboard.writeText(previous); } catch {}
       }, 1500);
     }
     return result;

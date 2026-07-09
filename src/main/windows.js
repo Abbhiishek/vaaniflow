@@ -52,13 +52,24 @@ function createOverlayWindow() {
   return win;
 }
 
-function createDashboardWindow(iconPath) {
+function createDashboardWindow(iconPath, settings) {
+  // Acrylic needs a transparent backgroundColor; the CSS surfaces provide the
+  // actual tint so the blur shows through exactly as much as the user chose.
+  const acrylic = Number(settings?.windowTransparency) > 0;
+  // Deliberate product decision: the dashboard is always a fixed-size window —
+  // no resize, no maximize, no fullscreen. The design size is clamped to the
+  // work area so it still fits on small screens.
+  const wa = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(1120, Math.round(wa.width * 0.92));
+  const height = Math.min(740, Math.round(wa.height * 0.92));
   const win = new BrowserWindow({
-    width: 1120,
-    height: 740,
-    minWidth: 880,
-    minHeight: 560,
-    backgroundColor: '#0f1011',
+    width,
+    height,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    backgroundColor: acrylic ? '#00000000' : '#0f1011',
+    ...(acrylic ? { backgroundMaterial: 'acrylic' } : {}),
     icon: iconPath,
     titleBarStyle: 'hidden',
     titleBarOverlay: {

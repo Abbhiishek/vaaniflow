@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' https:" />
   <title>VaaniFlow</title>
   <link rel="stylesheet" href="dashboard.css" />
 </head>
@@ -24,13 +24,21 @@
         <svg viewBox="0 0 24 24"><path fill="currentColor" d="m12 3 9 8h-3v9h-4v-6h-4v6H6v-9H3z"/></svg>
         Home
       </button>
-      <button class="nav-item" data-view="history">
-        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M13 3a9 9 0 0 0-9 9H1l3.9 3.9L8.8 12H6a7 7 0 1 1 2.1 5L6.7 18.4A9 9 0 1 0 13 3zm-1 5v5l4.3 2.5.7-1.2-3.5-2.1V8z"/></svg>
-        History
+      <button class="nav-item" data-view="insights">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 9h3v11H5zM10.5 4h3v16h-3zM16 13h3v7h-3z"/></svg>
+        Insights
       </button>
-      <button class="nav-item" data-view="settings">
-        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2.1-1.7a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.7 7.7 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.7 7.7 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.5 11a7.6 7.6 0 0 0 0 2l-2.1 1.7a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1a7.7 7.7 0 0 0 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6a7.7 7.7 0 0 0 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
-        Settings
+      <button class="nav-item" data-view="dictionary">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h13v18.5a1.5 1.5 0 0 1-1.5 1.5H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zm0 15a1 1 0 0 0-1 1 1 1 0 0 0 1 1h11v-2H6zm1-11v2h9V6H7z"/></svg>
+        Dictionary
+      </button>
+      <button class="nav-item" data-view="style">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20.7 5.6 18.4 3.3a1 1 0 0 0-1.4 0L7 13.3V17h3.7l10-10a1 1 0 0 0 0-1.4zM5 19h14v2H5z"/></svg>
+        Style
+      </button>
+      <button class="nav-item" data-view="snippets">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v2H4zm0 4h16v2H4zm0 4h10v2H4zm0 4h7v2H4z"/></svg>
+        Snippets
       </button>
 
       <div id="sidebar-footer">
@@ -38,14 +46,38 @@
           <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
           Start dictation
         </button>
+        <div id="sidebar-divider"></div>
+        <button class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2.1-1.7a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.7 7.7 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.7 7.7 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.5 11a7.6 7.6 0 0 0 0 2l-2.1 1.7a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1a7.7 7.7 0 0 0 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6a7.7 7.7 0 0 0 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+          Settings
+        </button>
+        <div id="update-banner" hidden>
+          <span id="update-text">Update ready</span>
+          <button id="update-install" class="primary-btn">Restart to update</button>
+        </div>
       </div>
     </nav>
 
     <main id="content">
-      <!-- ============ HOME ============ -->
+      <!-- ============ HOME: past generations ============ -->
       <section id="view-home" class="view active">
         <h1 id="greeting">Welcome back</h1>
         <p class="subtitle" id="home-hint"></p>
+        <div class="row feed-tools">
+          <input id="search" type="text" placeholder="Search transcripts…" />
+          <button id="btn-clear-history" class="danger-btn">Clear all</button>
+        </div>
+        <div id="history-list" class="transcript-list"></div>
+        <div id="history-empty" class="empty-state" hidden>
+          <p>No transcripts yet.</p>
+          <p class="empty-hint">Hold your hotkey and start talking — your words will appear where your cursor is.</p>
+        </div>
+      </section>
+
+      <!-- ============ INSIGHTS ============ -->
+      <section id="view-insights" class="view">
+        <h1>Insights</h1>
+        <p class="subtitle">Your dictation activity at a glance.</p>
 
         <div id="stats-grid">
           <div class="stat-card"><span class="stat-value" id="stat-words">0</span><span class="stat-label">Words dictated</span></div>
@@ -54,37 +86,142 @@
           <div class="stat-card"><span class="stat-value" id="stat-streak">0</span><span class="stat-label">Day streak</span></div>
         </div>
 
+        <div id="savings-grid">
+          <div class="stat-card">
+            <span class="stat-value" id="stat-keys">0</span>
+            <span class="stat-label">Keystrokes saved</span>
+            <span class="stat-sub">characters typed for you</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-time">–</span>
+            <span class="stat-label">Time saved vs typing</span>
+            <span class="stat-sub" id="stat-time-sub">vs typing at 40 wpm</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-cost">$0</span>
+            <span class="stat-label">Saved vs Wispr Flow</span>
+            <span class="stat-sub" id="stat-cost-sub">$12/mo subscription you didn't pay</span>
+          </div>
+        </div>
+
+        <div class="insight-card" id="heatmap-card">
+          <h3>Activity</h3>
+          <div id="heatmap"></div>
+          <div id="heatmap-legend"><span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span></div>
+        </div>
+
         <div id="insights-grid">
           <div class="insight-card">
             <h3>Last 14 days</h3>
             <div id="chart"></div>
           </div>
           <div class="insight-card">
-            <h3>Top apps</h3>
+            <h3>Desktop usage</h3>
             <div id="top-apps"></div>
           </div>
-        </div>
-
-        <div class="section-header">
-          <h2>Recent transcripts</h2>
-          <button class="link-btn" data-goto="history">View all</button>
-        </div>
-        <div id="recent-list" class="transcript-list"></div>
-        <div id="home-empty" class="empty-state" hidden>
-          <p>No transcripts yet.</p>
-          <p class="empty-hint">Hold your hotkey and start talking — your words will appear where your cursor is.</p>
+          <div class="insight-card">
+            <h3>Top words</h3>
+            <div id="top-words"></div>
+          </div>
+          <div class="insight-card">
+            <h3>Words the AI fixes most</h3>
+            <div id="fixed-words"></div>
+          </div>
         </div>
       </section>
 
-      <!-- ============ HISTORY ============ -->
-      <section id="view-history" class="view">
-        <div class="section-header">
-          <h1>History</h1>
-          <button id="btn-clear-history" class="danger-btn">Clear all</button>
+      <!-- ============ DICTIONARY ============ -->
+      <section id="view-dictionary" class="view">
+        <h1>Dictionary</h1>
+        <p class="subtitle">VaaniFlow learns the words Whisper gets wrong — names, products, jargon — automatically or from you.</p>
+
+        <div class="settings-group">
+          <h2>Suggested words</h2>
+          <p class="group-hint">Unique words spotted in your dictations. Accept to teach them to Whisper, dismiss to never see them again. Words seen 3+ times are added automatically.</p>
+          <label class="toggle"><input id="set-autoLearnVocabulary" type="checkbox" /><span></span>Learn new words automatically</label>
+          <div id="suggestion-list"></div>
+          <p class="group-hint" id="suggestion-empty" hidden>Nothing yet — suggestions appear as you dictate.</p>
         </div>
-        <input id="search" type="text" placeholder="Search transcripts…" />
-        <div id="history-list" class="transcript-list"></div>
-        <div id="history-empty" class="empty-state" hidden><p>Nothing here yet.</p></div>
+
+        <div class="settings-group">
+          <h2>Vocabulary</h2>
+          <label>Words sent to Whisper as a decoding hint
+            <textarea id="set-vocabulary" rows="4" placeholder="VaaniFlow, Kubernetes, AKS, Wispr Flow…&#10;(comma or newline separated)" spellcheck="false"></textarea>
+          </label>
+        </div>
+
+        <div class="settings-group">
+          <h2>Corrections</h2>
+          <p class="group-hint">Find &amp; replace rules applied to every transcript.</p>
+          <div id="repl-list"></div>
+          <div class="row repl-add">
+            <input id="repl-from" type="text" placeholder="heard as… e.g. whisper flow" spellcheck="false" />
+            <span class="repl-arrow">→</span>
+            <input id="repl-to" type="text" placeholder="replace with… e.g. Wispr Flow" spellcheck="false" />
+            <button id="repl-add-btn" class="primary-btn">Add</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ STYLE ============ -->
+      <section id="view-style" class="view">
+        <h1>Style</h1>
+        <p class="subtitle">How the AI writes your speech — needs a chat model set in Settings → AI polish.</p>
+
+        <div class="settings-group">
+          <h2>Writing style</h2>
+          <label class="toggle"><input id="set-autoTone" type="checkbox" /><span></span>Adapt tone to the app automatically</label>
+          <p class="group-hint">Detects where the text will land and writes accordingly: email apps get professional prose, chat apps get relaxed messages, AI assistants get precise prompts, code editors and terminals keep technical terms exact, and document apps get polished writing. Your per-app rules below always win.</p>
+          <label>Default tone (when no app matches)
+            <select id="set-defaultTone">
+              <option value="neutral">Neutral</option>
+              <option value="casual">Casual</option>
+              <option value="formal">Formal</option>
+              <option value="technical">Technical</option>
+              <option value="chat">Chat message</option>
+              <option value="email">Email</option>
+              <option value="prompt">AI prompt</option>
+            </select>
+          </label>
+          <label>Style instructions
+            <textarea id="set-styleInstructions" rows="5" placeholder="e.g. Short sentences. No emoji. Prefer active voice. Write numbers as digits. Keep my slang."></textarea>
+          </label>
+          <p class="group-hint">Free-form guidance given to the AI on every dictation.</p>
+        </div>
+
+        <div class="settings-group">
+          <h2>Tone per app</h2>
+          <p class="group-hint">Override the tone based on the app you're dictating into. First match wins, including over automatic adaptation.</p>
+          <div id="profile-list"></div>
+          <div class="row repl-add">
+            <input id="profile-match" type="text" placeholder="app or window title contains… e.g. slack" spellcheck="false" />
+            <select id="profile-tone" class="compact">
+              <option value="casual">Casual</option>
+              <option value="formal">Formal</option>
+              <option value="technical">Technical</option>
+              <option value="neutral">Neutral</option>
+              <option value="chat">Chat message</option>
+              <option value="email">Email</option>
+              <option value="prompt">AI prompt</option>
+            </select>
+            <button id="profile-add-btn" class="primary-btn">Add</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SNIPPETS ============ -->
+      <section id="view-snippets" class="view">
+        <h1>Snippets</h1>
+        <p class="subtitle">Say a trigger phrase (or "insert" + the phrase) as the whole dictation and the snippet text is inserted instead.</p>
+
+        <div class="settings-group">
+          <div id="snippet-list"></div>
+          <div class="snippet-add">
+            <input id="snippet-trigger" type="text" placeholder="trigger phrase… e.g. my signature" spellcheck="false" />
+            <textarea id="snippet-text" rows="3" placeholder="text to insert"></textarea>
+            <button id="snippet-add-btn" class="primary-btn">Add snippet</button>
+          </div>
+        </div>
       </section>
 
       <!-- ============ SETTINGS ============ -->
@@ -101,7 +238,7 @@
             <input id="set-apiKey" type="password" placeholder="(optional)" spellcheck="false" />
           </label>
           <div class="row">
-            <label>Model
+            <label>Whisper model
               <input id="set-model" type="text" placeholder="whisper-1" spellcheck="false" />
             </label>
             <label>Language
@@ -128,64 +265,28 @@
 
         <div class="settings-group">
           <h2>AI polish</h2>
-          <p class="group-hint">Run transcripts through a chat model on the same server: removes filler words ("um", "you know"), resolves self-corrections ("Tuesday, no wait, Wednesday"), and fixes punctuation. Leave the model blank to skip this stage.</p>
+          <p class="group-hint">A chat model cleans transcripts: filler words out, self-corrections resolved, punctuation fixed. Leave the endpoint empty to use the Whisper server above, or point it at any OpenAI-compatible provider (a fast one like Groq or Cerebras keeps polish under a second). If the deadline passes, the raw transcript is pasted instead, so dictation never waits on a slow model. Writing style lives on the Style page.</p>
+          <label>Chat model
+            <input id="set-chatModel" type="text" placeholder="e.g. llama-3.1-8b-instant or qwen2.5-3b-instruct" spellcheck="false" />
+          </label>
+          <label>Polish endpoint (optional, for a separate provider)
+            <input id="set-polishBaseUrl" type="text" placeholder="e.g. https://api.groq.com/openai" spellcheck="false" />
+          </label>
+          <label>Polish API key
+            <input id="set-polishApiKey" type="password" placeholder="key for the polish endpoint" spellcheck="false" />
+          </label>
           <div class="row">
-            <label>Chat model
-              <input id="set-chatModel" type="text" placeholder="e.g. qwen2.5-3b-instruct" spellcheck="false" />
-            </label>
-            <label>Default tone
-              <select id="set-defaultTone">
-                <option value="neutral">Neutral</option>
-                <option value="casual">Casual</option>
-                <option value="formal">Formal</option>
-                <option value="technical">Technical</option>
+            <label>Polish deadline
+              <select id="set-polishTimeoutSec">
+                <option value="3">3 seconds</option>
+                <option value="5">5 seconds</option>
+                <option value="8">8 seconds</option>
+                <option value="15">15 seconds</option>
+                <option value="25">25 seconds</option>
               </select>
             </label>
           </div>
           <label class="toggle"><input id="set-polishEnabled" type="checkbox" /><span></span>Polish transcripts</label>
-          <div>
-            <span class="field-label">Tone per app (first match wins)</span>
-            <div id="profile-list"></div>
-            <div class="row repl-add">
-              <input id="profile-match" type="text" placeholder="app or window title contains… e.g. slack" spellcheck="false" />
-              <select id="profile-tone" class="compact">
-                <option value="casual">Casual</option>
-                <option value="formal">Formal</option>
-                <option value="technical">Technical</option>
-                <option value="neutral">Neutral</option>
-              </select>
-              <button id="profile-add-btn" class="primary-btn">Add</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <h2>Dictionary</h2>
-          <p class="group-hint">Teach Whisper the words it gets wrong — names, products, jargon.</p>
-          <label>Custom vocabulary
-            <textarea id="set-vocabulary" rows="3" placeholder="VaaniFlow, Kubernetes, AKS, Wispr Flow…&#10;(comma or newline separated — sent to the model as a decoding hint)" spellcheck="false"></textarea>
-          </label>
-          <div>
-            <span class="field-label">Corrections (find &amp; replace, applied after transcription)</span>
-            <div id="repl-list"></div>
-            <div class="row repl-add">
-              <input id="repl-from" type="text" placeholder="heard as… e.g. whisper flow" spellcheck="false" />
-              <span class="repl-arrow">→</span>
-              <input id="repl-to" type="text" placeholder="replace with… e.g. Wispr Flow" spellcheck="false" />
-              <button id="repl-add-btn" class="primary-btn">Add</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <h2>Snippets</h2>
-          <p class="group-hint">Say a trigger phrase (or "insert" + the phrase) as the whole dictation and the snippet text is inserted instead — addresses, signatures, boilerplate.</p>
-          <div id="snippet-list"></div>
-          <div class="snippet-add">
-            <input id="snippet-trigger" type="text" placeholder="trigger phrase… e.g. my signature" spellcheck="false" />
-            <textarea id="snippet-text" rows="2" placeholder="text to insert"></textarea>
-            <button id="snippet-add-btn" class="primary-btn">Add snippet</button>
-          </div>
         </div>
 
         <div class="settings-group">
@@ -210,6 +311,18 @@
         </div>
 
         <div class="settings-group">
+          <h2>Appearance</h2>
+          <p class="group-hint">Acrylic transparency lets your desktop blur through the window (Windows 11). The primary color tints buttons, charts, and the activity heatmap.</p>
+          <label>Window transparency <span id="transparency-label" class="label-hint">off</span>
+            <input id="set-windowTransparency" type="range" min="0" max="70" step="5" />
+          </label>
+          <label>Primary color
+            <input id="set-accentColor" type="color" />
+          </label>
+          <button id="accent-reset" class="link-btn">Reset color to default</button>
+        </div>
+
+        <div class="settings-group">
           <h2>Behavior</h2>
           <label class="toggle"><input id="set-fastMode" type="checkbox" /><span></span>Fast mode — transcribe long dictations in chunks while you speak</label>
           <label class="toggle"><input id="set-spokenCommands" type="checkbox" /><span></span>Spoken commands — "new line", "new paragraph", "period", "scratch that"</label>
@@ -228,13 +341,10 @@
           <label class="toggle"><input id="set-launchAtLogin" type="checkbox" /><span></span>Launch VaaniFlow when Windows starts</label>
         </div>
       </section>
+
     </main>
   </div>
 
-  <div id="update-banner" hidden>
-    <span id="update-text">Update ready</span>
-    <button id="update-install" class="primary-btn">Restart to update</button>
-  </div>
   <div id="toast" hidden></div>
   <script src="dashboard.js"></script>
 </body>

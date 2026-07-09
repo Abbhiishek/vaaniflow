@@ -14,6 +14,24 @@ function tidy(text) {
     .trim();
 }
 
+// Phrases Whisper hallucinates on near-silent audio (training-data residue from
+// video captions). Dropped only when they are the ENTIRE chunk — a dictated
+// "thanks for watching" inside a longer sentence survives. Deliberately does
+// not include bare "thank you": people genuinely dictate that.
+// entries are pre-normalized: lowercase, punctuation collapsed to single spaces
+const HALLUCINATED_CHUNKS = new Set([
+  'thanks for watching', 'thank you for watching', 'thanks for listening',
+  'thank you for listening', 'please subscribe', 'subscribe to my channel',
+  'like and subscribe', 'see you in the next video', 'see you next time',
+  'subtitles by the amara org community', 'transcribed by otter ai',
+  'www youtube com'
+]);
+
+function isHallucinatedChunk(text) {
+  const norm = String(text || '').toLowerCase().replace(/[.!?,'’"\s]+/g, ' ').trim();
+  return HALLUCINATED_CHUNKS.has(norm);
+}
+
 // Strip [BLANK_AUDIO]-style artifacts. Bracketed/asterisked segments are always
 // annotations; parenthesized ones only when they match known noise words (so a
 // genuinely dictated parenthetical survives).
@@ -23,7 +41,8 @@ function cleanArtifacts(text) {
   t = t.replace(/\*[^*\n]{0,60}\*/g, ' ');
   t = t.replace(/♪[^♪\n]*♪?/g, ' ');
   t = t.replace(/\(([^)\n]{0,60})\)/g, (m, inner) => (NOISE_WORDS.test(inner.trim()) ? ' ' : m));
-  return tidy(t);
+  t = tidy(t);
+  return isHallucinatedChunk(t) ? '' : t;
 }
 
 // rules: [{ from, to }] — case-insensitive; whole-word when the pattern looks word-like
@@ -98,13 +117,19 @@ function expandSnippets(text, snippets) {
 
 // Builds the Whisper `prompt` decoding hint: user vocabulary + trailing context
 // from the previous chunk (keeps chunked transcriptions coherent at boundaries).
+// Whisper keeps only the LAST ~224 tokens of the prompt, dropping the start —
+// cap the vocabulary so a large dictionary can't push itself (or the tail) out.
 function buildPrompt(vocabulary, prevTail) {
   const words = String(vocabulary || '')
     .split(/[,\n]/)
     .map((w) => w.trim())
     .filter(Boolean);
   const parts = [];
-  if (words.length) parts.push(words.join(', ') + '.');
+  if (words.length) {
+    let vocab = words.join(', ');
+    if (vocab.length > 600) vocab = vocab.slice(0, 600).replace(/,[^,]*$/, '');
+    parts.push(vocab + '.');
+  }
   if (prevTail) parts.push(String(prevTail).slice(-200));
   return parts.length ? parts.join(' ') : undefined;
 }

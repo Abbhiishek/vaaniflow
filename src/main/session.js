@@ -12,9 +12,13 @@
 // previous chunk's tail as decoder context) and echoed back to the overlay as a
 // live caption. On stop, only the final chunk's latency is felt.
 'use strict';
+const fs = require('fs');
+const path = require('path');
+const { app } = require('electron');
 const { EventEmitter } = require('events');
 const { transcribe, warmup } = require('./transcriber');
-const { polishText } = require('./polisher');
+const { polishText, polishWarmup } = require('./polisher');
+const { pickTone } = require('./tones');
 const {
   cleanArtifacts,
   applyReplacements,
@@ -28,6 +32,7 @@ const TAP_MS = 350; // held shorter than this = "tap" → hands-free mode
 const MIN_AUDIO_MS = 350; // discard blips shorter than this
 const MAX_RECORD_MS = 5 * 60 * 1000;
 const INTRUDE_WINDOW_MS = 700; // other key right after combo-down = app shortcut, not dictation
+const FAILED_AUDIO_KEEP = 6; // rescued WAVs kept on disk before pruning oldest
 
 class Session extends EventEmitter {
   constructor({ store, injector, getOverlay }) {
@@ -48,6 +53,8 @@ class Session extends EventEmitter {
     this.chunkChain = Promise.resolve();
     this.chunkError = null;
     this.prevTail = '';
+    this.sessionWavs = []; // raw chunk audio, kept so a failed dictation is recoverable
+    this.stoppedAt = 0; // per-stage latency telemetry
   }
 
   _sendOverlay(payload) {
@@ -65,6 +72,34 @@ class Session extends EventEmitter {
     this.chunkChain = Promise.resolve();
     this.chunkError = null;
     this.prevTail = '';
+    this.sessionWavs = [];
+    this.stoppedAt = 0;
+  }
+
+  // The user's speech must survive a dead server: dump this session's audio to
+  // disk so the words aren't simply gone. Returns the folder, or null.
+  _saveFailedAudio() {
+    if (!this.sessionWavs.length) return null;
+    try {
+      const dir = path.join(app.getPath('userData'), 'failed-audio');
+      fs.mkdirSync(dir, { recursive: true });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      this.sessionWavs.forEach((buf, i) => {
+        fs.writeFileSync(path.join(dir, `${stamp}-${i + 1}.wav`), buf);
+      });
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.wav')).sort();
+      // one dictation can span several chunk files; prune by leading timestamp
+      const stamps = [...new Set(files.map((f) => f.replace(/-\d+\.wav$/, '')))];
+      for (const old of stamps.slice(0, Math.max(0, stamps.length - FAILED_AUDIO_KEEP))) {
+        for (const f of files.filter((n) => n.startsWith(old))) {
+          try { fs.unlinkSync(path.join(dir, f)); } catch {}
+        }
+      }
+      return dir;
+    } catch (err) {
+      console.error('failed-audio save:', err.message);
+      return null;
+    }
   }
 
   // ---- hotkey / key events -------------------------------------------------
@@ -127,6 +162,7 @@ class Session extends EventEmitter {
     this._resetPipeline();
     const s = this.store.settings;
     warmup(s);
+    polishWarmup(s);
     this.appInfo = null;
     this.injector.foreground().then((info) => { this.appInfo = info; }).catch(() => {});
     this._sendOverlay({
@@ -145,6 +181,7 @@ class Session extends EventEmitter {
     if (this.state !== 'recording') return;
     clearTimeout(this.maxTimer);
     this.state = 'processing';
+    this.stoppedAt = Date.now();
     this._sendOverlay({ type: 'processing' });
     // overlay responds with onAudioData / onAudioError
   }
@@ -163,12 +200,14 @@ class Session extends EventEmitter {
     const gen = this.gen;
     const idx = this.chunkTexts.length;
     this.chunkTexts.push(null);
+    const wavBuffer = Buffer.from(wavArrayBuffer);
+    this.sessionWavs.push(wavBuffer);
     const settings = this.store.settings;
     this.chunkChain = this.chunkChain.then(async () => {
       if (gen !== this.gen) return;
       try {
         const prompt = buildPrompt(settings.vocabulary, this.prevTail);
-        const raw = await transcribe(Buffer.from(wavArrayBuffer), settings, { prompt });
+        const raw = await transcribe(wavBuffer, settings, { prompt });
         if (gen !== this.gen) return;
         const text = cleanArtifacts(raw);
         this.chunkTexts[idx] = text;
@@ -192,12 +231,7 @@ class Session extends EventEmitter {
   }
 
   _pickTone(settings) {
-    const hay = `${this.appInfo?.app || ''} ${this.appInfo?.title || ''}`.toLowerCase();
-    for (const p of settings.appProfiles || []) {
-      const match = String(p?.match || '').toLowerCase().trim();
-      if (match && hay.includes(match)) return p.tone || 'neutral';
-    }
-    return settings.defaultTone || 'neutral';
+    return pickTone(this.appInfo, settings);
   }
 
   // ---- final audio arriving from the overlay renderer ------------------------
@@ -218,16 +252,22 @@ class Session extends EventEmitter {
     if (!skip) this._enqueueChunk(wavArrayBuffer);
     await this.chunkChain;
     if (gen !== this.gen || this.state !== 'processing') return;
+    const sttDoneAt = Date.now();
 
     if (this.chunkError) {
       this.state = 'idle';
-      this._sendOverlay({ type: 'error', message: this.chunkError.message });
+      const saved = this._saveFailedAudio();
+      this._sendOverlay({
+        type: 'error',
+        message: this.chunkError.message + (saved ? ' — audio saved to failed-audio' : '')
+      });
       return;
     }
 
     const settings = this.store.settings;
     let text = this.chunkTexts.filter(Boolean).join(' ');
     let polished = false;
+    let rawText = ''; // pre-polish text, kept when fixes changed it (Insights diffs them)
 
     // whole utterance is a snippet trigger → insert the snippet verbatim
     const snippet = expandSnippets(text, settings.snippets);
@@ -236,6 +276,7 @@ class Session extends EventEmitter {
     } else {
       text = applyScratchThat(text);
       if (settings.spokenCommands !== false) text = applySpokenCommands(text);
+      rawText = text;
       if (text) {
         this._sendOverlay({ type: 'status', text: 'Polishing…' });
         const result = await polishText(text, settings, this._pickTone(settings));
@@ -251,15 +292,7 @@ class Session extends EventEmitter {
       this._sendOverlay({ type: 'error', message: 'No speech detected' });
       return;
     }
-
-    const entry = this.store.addTranscript({
-      text,
-      durationMs,
-      mode: this.mode,
-      app: this.appInfo?.app || '',
-      polished
-    });
-    this._notifyHistoryChanged();
+    const polishDoneAt = Date.now();
 
     let pasted = false;
     if (settings.autoPaste) {
@@ -274,6 +307,27 @@ class Session extends EventEmitter {
       const { clipboard } = require('electron');
       clipboard.writeText(text);
     }
+
+    // where the post-release seconds went: transcription tail, polish, paste
+    const latency = {
+      sttMs: sttDoneAt - this.stoppedAt,
+      polishMs: polishDoneAt - sttDoneAt,
+      pasteMs: Date.now() - polishDoneAt,
+      totalMs: Date.now() - this.stoppedAt
+    };
+    console.log(`dictation latency: stt=${latency.sttMs}ms polish=${latency.polishMs}ms paste=${latency.pasteMs}ms`);
+
+    const entry = this.store.addTranscript({
+      text,
+      durationMs,
+      mode: this.mode,
+      app: this.appInfo?.app || '',
+      polished,
+      latency,
+      raw: rawText && rawText !== text ? rawText : undefined
+    });
+    this._notifyHistoryChanged();
+    this.emit('transcript-added', entry);
 
     this.state = 'idle';
     this._sendOverlay({ type: 'done', words: entry.words, pasted });

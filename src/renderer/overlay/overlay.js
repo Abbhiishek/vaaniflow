@@ -17,7 +17,12 @@ let msgResetTimer = null;
 // ---------------- audio capture ----------------
 
 const TARGET_RATE = 16000;
-const SILENCE_RMS = 0.01;
+// Silence detection is adaptive: a fixed threshold either never sees silence in
+// a noisy room (no chunk cuts → fast mode degrades) or eats quiet speech.
+// The floor tracks ambient level; "silence" is anything close to it.
+const SILENCE_RMS_MIN = 0.006; // never call it speech below this
+const SILENCE_RMS_MAX = 0.06; // never call it silence above this (loud rooms)
+const NOISE_FLOOR_RATIO = 3; // speech must rise this far above the ambient floor
 const CHUNK_MIN_MS = 4000; // don't cut before this much audio
 const CHUNK_PAUSE_MS = 550; // silence needed to cut
 const CHUNK_FORCE_MS = 25000; // cut even mid-speech (whisper context is ~30 s)
@@ -42,8 +47,21 @@ const rec = {
   autoStopSec: 0,
   silenceRunMs: 0, // continuous silence, not reset by chunk cuts
   anySpeech: false,
-  autoStopFired: false
+  autoStopFired: false,
+  noiseFloor: 0.01 // adaptive ambient level estimate
 };
+
+function silenceThreshold() {
+  return Math.min(SILENCE_RMS_MAX, Math.max(SILENCE_RMS_MIN, rec.noiseFloor * NOISE_FLOOR_RATIO));
+}
+
+// Track the ambient floor: sink quickly toward quiet levels, creep up slowly so
+// speech doesn't drag the floor with it.
+function updateNoiseFloor(rms) {
+  if (rms < rec.noiseFloor) rec.noiseFloor += (rms - rec.noiseFloor) * 0.3;
+  else rec.noiseFloor += (rms - rec.noiseFloor) * 0.005;
+  rec.noiseFloor = Math.min(rec.noiseFloor, SILENCE_RMS_MAX / NOISE_FLOOR_RATIO);
+}
 
 async function startCapture({ micDeviceId, sounds, fastMode, mode, autoStopSec }) {
   rec.sounds = sounds !== false;
@@ -57,6 +75,7 @@ async function startCapture({ micDeviceId, sounds, fastMode, mode, autoStopSec }
   rec.silenceRunMs = 0;
   rec.anySpeech = false;
   rec.autoStopFired = false;
+  rec.noiseFloor = 0.01;
   const constraints = {
     audio: {
       echoCancellation: true,
@@ -120,7 +139,8 @@ function handleBatch(f32) {
   let sum = 0;
   for (let i = 0; i < f32.length; i++) sum += f32[i] * f32[i];
   const rms = Math.sqrt(sum / f32.length);
-  if (rms < SILENCE_RMS) {
+  updateNoiseFloor(rms);
+  if (rms < silenceThreshold()) {
     rec.silenceMs += ms;
     rec.silenceRunMs += ms;
   } else {
@@ -158,13 +178,14 @@ function concatChunks() {
 // Drop leading/trailing silence (keeps PAD_SAMPLES of padding) — smaller uploads,
 // faster server-side inference. Returns empty array if it's all silence.
 function trimSilence(pcm) {
+  const threshold = silenceThreshold();
   const win = 320; // 20 ms
   let first = -1;
   let last = -1;
   for (let i = 0; i + win <= pcm.length; i += win) {
     let sum = 0;
     for (let j = i; j < i + win; j++) sum += pcm[j] * pcm[j];
-    if (Math.sqrt(sum / win) >= SILENCE_RMS) {
+    if (Math.sqrt(sum / win) >= threshold) {
       if (first < 0) first = i;
       last = i + win;
     }

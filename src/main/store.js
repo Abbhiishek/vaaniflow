@@ -58,11 +58,21 @@ const SETTINGS_DEFAULTS = {
   replacements: [], // [{ from, to }] applied to transcripts after transcription
   spokenCommands: true, // "new line", "period", "scratch that"
   autoStopSec: 8, // end hands-free after this much silence (0 = never)
-  chatModel: '', // LocalAI chat model for the polish stage ('' = disabled)
+  chatModel: '', // chat model for the polish stage ('' = disabled)
   polishEnabled: true,
+  polishBaseUrl: '', // separate OpenAI-compatible endpoint for polish ('' = same server as Whisper)
+  polishApiKey: '', // key for the polish endpoint (used alone when polishBaseUrl is set)
+  polishTimeoutSec: 8, // polish deadline; on timeout the raw transcript is pasted
   defaultTone: 'neutral',
+  autoTone: true, // auto-adapt tone to the target app (email/chat/AI prompt/code/docs)
   appProfiles: [], // [{ match, tone }] — tone override when foreground app matches
-  snippets: [] // [{ trigger, text }] — say the trigger, get the text
+  snippets: [], // [{ trigger, text }] — say the trigger, get the text
+  styleInstructions: '', // free-text writing style for the polish stage
+  windowTransparency: 0, // 0–70% acrylic see-through on the dashboard (0 = solid)
+  accentColor: '#e8e9eb', // primary color for buttons, toggles, charts, heatmap
+  autoLearnVocabulary: true, // auto-add frequent proper nouns to the dictionary
+  dictionarySuggestions: {}, // word -> times seen (candidates not yet in vocabulary)
+  dictionaryDismissed: [] // suggestions the user rejected
 };
 
 class Store {
@@ -85,7 +95,7 @@ class Store {
     return this.historyFile.data;
   }
 
-  addTranscript({ text, durationMs, mode, app, polished }) {
+  addTranscript({ text, durationMs, mode, app, polished, latency, raw }) {
     const entry = {
       id: crypto.randomUUID(),
       text,
@@ -94,7 +104,9 @@ class Store {
       words: text.split(/\s+/).filter(Boolean).length,
       mode: mode || 'ptt',
       app: app || '',
-      polished: !!polished
+      polished: !!polished,
+      ...(latency ? { latency } : {}), // per-stage ms
+      ...(raw ? { raw: String(raw).slice(0, 4000) } : {}) // pre-polish text, for the "fixed words" insight
     };
     this.historyFile.data.unshift(entry);
     if (this.historyFile.data.length > 5000) this.historyFile.data.length = 5000;

@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('vaani', {
   clearHistory: () => ipcRenderer.invoke('history:clear'),
   onHistoryChanged: (cb) => ipcRenderer.on('history:changed', () => cb()),
 
+  onSettingsChanged: (cb) => ipcRenderer.on('settings:changed', () => cb()),
+
   // updates
   getUpdateState: () => ipcRenderer.invoke('update:state'),
   installUpdate: () => ipcRenderer.invoke('update:install'),

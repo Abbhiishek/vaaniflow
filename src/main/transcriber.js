@@ -9,14 +9,27 @@ function normalizeBaseUrl(baseUrl) {
 }
 
 class TranscriptionError extends Error {
-  constructor(message, { status } = {}) {
+  constructor(message, { status, transient } = {}) {
     super(message);
     this.name = 'TranscriptionError';
     this.status = status;
+    this.transient = !!transient; // network blip / timeout / 5xx — worth one retry
   }
 }
 
-async function transcribe(wavBuffer, settings, { prompt } = {}) {
+// One dropped packet must not cost the user their dictation: transient
+// failures (network, timeout, 5xx) get a single retry before surfacing.
+async function transcribe(wavBuffer, settings, opts = {}) {
+  try {
+    return await transcribeOnce(wavBuffer, settings, opts);
+  } catch (err) {
+    if (!err.transient) throw err;
+    await new Promise((r) => setTimeout(r, 300));
+    return transcribeOnce(wavBuffer, settings, opts);
+  }
+}
+
+async function transcribeOnce(wavBuffer, settings, { prompt } = {}) {
   const base = normalizeBaseUrl(settings.baseUrl);
   if (!base) {
     throw new TranscriptionError('No server URL configured. Open Settings and add your Whisper server URL.');
@@ -26,6 +39,7 @@ async function transcribe(wavBuffer, settings, { prompt } = {}) {
   form.append('file', new Blob([wavBuffer], { type: 'audio/wav' }), 'audio.wav');
   form.append('model', settings.model || 'whisper-1');
   form.append('response_format', 'json');
+  form.append('temperature', '0'); // deterministic decoding; fewer hallucinated fillers
   if (settings.language && settings.language !== 'auto') {
     form.append('language', settings.language);
   }
@@ -45,9 +59,9 @@ async function transcribe(wavBuffer, settings, { prompt } = {}) {
     });
   } catch (err) {
     if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-      throw new TranscriptionError(`Server timed out after ${timeoutMs / 1000}s`);
+      throw new TranscriptionError(`Server timed out after ${timeoutMs / 1000}s`, { transient: true });
     }
-    throw new TranscriptionError(`Could not reach server: ${err.cause?.code || err.message}`);
+    throw new TranscriptionError(`Could not reach server: ${err.cause?.code || err.message}`, { transient: true });
   }
 
   if (!res.ok) {
@@ -60,7 +74,10 @@ async function transcribe(wavBuffer, settings, { prompt } = {}) {
     if (res.status === 401 || res.status === 403) {
       throw new TranscriptionError('Server rejected the API key (check Settings)', { status: res.status });
     }
-    throw new TranscriptionError(`Server error ${res.status}${detail ? `: ${detail}` : ''}`, { status: res.status });
+    throw new TranscriptionError(`Server error ${res.status}${detail ? `: ${detail}` : ''}`, {
+      status: res.status,
+      transient: res.status >= 500
+    });
   }
 
   const data = await res.json().catch(() => ({}));

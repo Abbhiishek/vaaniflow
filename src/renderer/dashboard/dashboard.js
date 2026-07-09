@@ -16,7 +16,6 @@ function showView(name) {
 }
 
 $$('.nav-item').forEach((btn) => btn.addEventListener('click', () => showView(btn.dataset.view)));
-$$('[data-goto]').forEach((btn) => btn.addEventListener('click', () => showView(btn.dataset.goto)));
 
 $('#btn-dictate').addEventListener('click', () => window.vaani.toggleDictation());
 
@@ -31,7 +30,7 @@ function toast(text) {
   toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
 }
 
-// ---------------- rendering: transcripts ----------------
+// ---------------- home: past generations ----------------
 
 function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -91,14 +90,6 @@ function transcriptCard(entry) {
   return card;
 }
 
-function renderRecent() {
-  const list = $('#recent-list');
-  list.innerHTML = '';
-  const recent = history.slice(0, 5);
-  $('#home-empty').hidden = recent.length > 0;
-  recent.forEach((e) => list.appendChild(transcriptCard(e)));
-}
-
 function renderHistory() {
   const list = $('#history-list');
   const q = $('#search').value.trim().toLowerCase();
@@ -107,7 +98,7 @@ function renderHistory() {
   $('#history-empty').hidden = filtered.length > 0;
 
   let lastDay = null;
-  for (const entry of filtered) {
+  for (const entry of filtered.slice(0, 300)) {
     const day = fmtDay(entry.ts);
     if (day !== lastDay) {
       const label = document.createElement('div');
@@ -120,12 +111,60 @@ function renderHistory() {
   }
 }
 
+$('#search').addEventListener('input', renderHistory);
+
+$('#btn-clear-history').addEventListener('click', async () => {
+  if (!history.length) return;
+  history = await window.vaani.clearHistory();
+  renderAll();
+  toast('History cleared');
+});
+
+window.vaani.onHistoryChanged(async () => {
+  history = await window.vaani.getHistory();
+  renderAll();
+});
+
+// ---------------- insights ----------------
+
+const TYPING_WPM = 40; // average typing speed the "time saved" stat compares against
+const WISPR_FLOW_USD_PER_MONTH = 12; // Wispr Flow Pro, annual billing
+
+// function words excluded from the "Top words" ranking so it surfaces what the
+// user actually talks about, not English plumbing
+const COMMON_WORDS = new Set(('the,and,that,this,with,for,you,your,not,are,was,were,have,has,had,but,they,them,their,then,than,there,here,what,when,where,which,who,why,how,can,could,would,should,will,shall,may,might,must,just,like,also,very,really,about,into,over,under,after,before,between,because,its,from,out,off,all,any,some,more,most,much,many,few,now,only,even,still,too,again,once,she,him,her,his,hers,our,ours,out,being,been,does,did,doing,get,got,going,want,need,make,made,let,say,said,see,know,think,thing,things,one,two,way,well,yes,yeah,okay,right,actually,basically,something,anything,everything,nothing,someone,anyone,everyone,dont,cant,wont,didnt,doesnt,isnt,arent,wasnt,youre,thats,were,weve,ive,ill,youll,hes,shes,theyre,lets,gonna,kind,sort,bit,lot,use,using,used').split(','));
+
+function tokenizeWords(s) {
+  return (String(s || '').toLowerCase().match(/[a-z][a-z'’-]*[a-z]/g) || [])
+    .map((w) => w.replace(/[’']/g, ''));
+}
+
 function renderStats() {
   const totalWords = history.reduce((n, e) => n + e.words, 0);
   const totalMs = history.reduce((n, e) => n + e.durationMs, 0);
   $('#stat-words').textContent = totalWords.toLocaleString();
   $('#stat-count').textContent = history.length.toLocaleString();
   $('#stat-wpm').textContent = totalMs > 3000 ? Math.round(totalWords / (totalMs / 60000)) : '–';
+
+  // ---- savings ----
+  const chars = history.reduce((n, e) => n + e.text.length, 0);
+  $('#stat-keys').textContent = chars >= 100000
+    ? new Intl.NumberFormat([], { notation: 'compact', maximumFractionDigits: 1 }).format(chars)
+    : chars.toLocaleString();
+
+  const savedMin = Math.max(0, totalWords / TYPING_WPM - totalMs / 60000);
+  $('#stat-time').textContent = savedMin < 1 ? '–'
+    : savedMin < 60 ? `${Math.round(savedMin)}m`
+    : `${Math.floor(savedMin / 60)}h ${Math.round(savedMin % 60)}m`;
+
+  const monthsActive = new Set(history.map((e) => {
+    const d = new Date(e.ts);
+    return `${d.getFullYear()}-${d.getMonth()}`;
+  })).size;
+  $('#stat-cost').textContent = `$${monthsActive * WISPR_FLOW_USD_PER_MONTH}`;
+  $('#stat-cost-sub').textContent = monthsActive
+    ? `$${WISPR_FLOW_USD_PER_MONTH}/mo × ${monthsActive} month${monthsActive === 1 ? '' : 's'} of dictating`
+    : `$${WISPR_FLOW_USD_PER_MONTH}/mo subscription you didn't pay`;
 
   // streak: consecutive days (ending today or yesterday) with ≥1 dictation
   const days = new Set(history.map((e) => new Date(e.ts).toDateString()));
@@ -140,6 +179,34 @@ function renderStats() {
 
   const hour = new Date().getHours();
   $('#greeting').textContent = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+}
+
+// GitHub-style contribution heatmap: last ~18 weeks of words/day
+function renderHeatmap() {
+  const container = $('#heatmap');
+  container.innerHTML = '';
+
+  const byDay = new Map();
+  for (const e of history) {
+    const key = new Date(e.ts).toDateString();
+    byDay.set(key, (byDay.get(key) || 0) + e.words);
+  }
+
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - (25 * 7 + today.getDay())); // back to a Sunday, 26 columns (~6 months)
+  const max = Math.max(1, ...byDay.values());
+
+  const cursor = new Date(start);
+  while (cursor <= today) {
+    const words = byDay.get(cursor.toDateString()) || 0;
+    const level = words === 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((words / max) * 4)));
+    const cell = document.createElement('i');
+    cell.dataset.level = level;
+    cell.title = `${cursor.toLocaleDateString([], { month: 'short', day: 'numeric' })} — ${words.toLocaleString()} words`;
+    container.appendChild(cell);
+    cursor.setDate(cursor.getDate() + 1);
+  }
 }
 
 function renderChart() {
@@ -183,7 +250,7 @@ function renderTopApps() {
     if (!e.app) continue;
     byApp.set(e.app, (byApp.get(e.app) || 0) + e.words);
   }
-  const top = [...byApp.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const top = [...byApp.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   if (!top.length) {
     const empty = document.createElement('div');
     empty.className = 'insight-empty';
@@ -211,29 +278,83 @@ function renderTopApps() {
   }
 }
 
+// Ranked word list with count + bar, shared by "Top words" and "Words the AI fixes most".
+function renderWordList(container, entries, emptyText, countLabel) {
+  container.innerHTML = '';
+  if (!entries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'insight-empty';
+    empty.textContent = emptyText;
+    container.appendChild(empty);
+    return;
+  }
+  const max = entries[0][1];
+  entries.forEach(([word, count], i) => {
+    const row = document.createElement('div');
+    row.className = 'word-row';
+    const rank = document.createElement('span');
+    rank.className = 'word-rank';
+    rank.textContent = `${i + 1}.`;
+    const nameWrap = document.createElement('div');
+    nameWrap.className = 'word-name';
+    const name = document.createElement('div');
+    name.textContent = word;
+    const bar = document.createElement('div');
+    bar.className = 'word-bar';
+    bar.style.width = `${Math.max(6, Math.round((count / max) * 100))}%`;
+    nameWrap.append(name, bar);
+    const num = document.createElement('span');
+    num.className = 'word-count';
+    num.textContent = `${count.toLocaleString()}${countLabel}`;
+    row.append(rank, nameWrap, num);
+    container.appendChild(row);
+  });
+}
+
+// Top 10 words the user actually says (function words excluded).
+function renderTopWords() {
+  const counts = new Map();
+  for (const e of history) {
+    for (const w of tokenizeWords(e.text)) {
+      if (w.length < 3 || COMMON_WORDS.has(w)) continue;
+      counts.set(w, (counts.get(w) || 0) + 1);
+    }
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  renderWordList($('#top-words'), top, 'Dictate a bit and your most-used words show up here.', '×');
+}
+
+// Words that appear in the raw transcript but got removed/changed by the
+// polish stage or correction rules — i.e. what Whisper mishears or the user
+// stumbles over. Needs entries recorded with `raw` (v1.1+).
+function renderFixedWords() {
+  const fixed = new Map();
+  for (const e of history) {
+    if (!e.raw) continue;
+    const rawCounts = new Map();
+    for (const w of tokenizeWords(e.raw)) rawCounts.set(w, (rawCounts.get(w) || 0) + 1);
+    for (const w of tokenizeWords(e.text)) {
+      if (rawCounts.has(w)) rawCounts.set(w, rawCounts.get(w) - 1);
+    }
+    for (const [w, n] of rawCounts) {
+      if (n > 0 && w.length >= 2) fixed.set(w, (fixed.get(w) || 0) + n);
+    }
+  }
+  const top = [...fixed.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  renderWordList($('#fixed-words'), top, 'Once polished dictations accumulate, the words that get cleaned up most appear here.', '× fixed');
+}
+
 function renderAll() {
   renderStats();
+  renderHeatmap();
   renderChart();
   renderTopApps();
-  renderRecent();
+  renderTopWords();
+  renderFixedWords();
   renderHistory();
 }
 
-$('#search').addEventListener('input', renderHistory);
-
-$('#btn-clear-history').addEventListener('click', async () => {
-  if (!history.length) return;
-  history = await window.vaani.clearHistory();
-  renderAll();
-  toast('History cleared');
-});
-
-window.vaani.onHistoryChanged(async () => {
-  history = await window.vaani.getHistory();
-  renderAll();
-});
-
-// ---------------- settings ----------------
+// ---------------- settings fields ----------------
 
 const FIELDS = {
   baseUrl: { el: '#set-baseUrl', type: 'text' },
@@ -243,12 +364,20 @@ const FIELDS = {
   micDeviceId: { el: '#set-mic', type: 'select' },
   hotkey: { el: '#set-hotkey', type: 'select' },
   vocabulary: { el: '#set-vocabulary', type: 'text' },
+  autoLearnVocabulary: { el: '#set-autoLearnVocabulary', type: 'bool' },
   chatModel: { el: '#set-chatModel', type: 'text' },
+  polishBaseUrl: { el: '#set-polishBaseUrl', type: 'text' },
+  polishApiKey: { el: '#set-polishApiKey', type: 'text' },
+  polishTimeoutSec: { el: '#set-polishTimeoutSec', type: 'select' },
   defaultTone: { el: '#set-defaultTone', type: 'select' },
+  autoTone: { el: '#set-autoTone', type: 'bool' },
+  styleInstructions: { el: '#set-styleInstructions', type: 'text' },
   polishEnabled: { el: '#set-polishEnabled', type: 'bool' },
   fastMode: { el: '#set-fastMode', type: 'bool' },
   spokenCommands: { el: '#set-spokenCommands', type: 'bool' },
   autoStopSec: { el: '#set-autoStopSec', type: 'select' },
+  windowTransparency: { el: '#set-windowTransparency', type: 'text' },
+  accentColor: { el: '#set-accentColor', type: 'text' },
   autoPaste: { el: '#set-autoPaste', type: 'bool' },
   restoreClipboard: { el: '#set-restoreClipboard', type: 'bool' },
   compensateSpace: { el: '#set-compensateSpace', type: 'bool' },
@@ -278,15 +407,110 @@ function scheduleSave(key) {
     patch.apiKey = patch.apiKey.trim();
     patch.model = patch.model.trim() || 'whisper-1';
     patch.chatModel = patch.chatModel.trim();
+    patch.polishBaseUrl = patch.polishBaseUrl.trim();
+    patch.polishApiKey = patch.polishApiKey.trim();
+    patch.polishTimeoutSec = Number(patch.polishTimeoutSec) || 8;
     patch.autoStopSec = Number(patch.autoStopSec) || 0;
+    patch.windowTransparency = Number(patch.windowTransparency) || 0;
     settings = await window.vaani.setSettings(patch);
-  }, ['baseUrl', 'apiKey', 'model', 'chatModel', 'vocabulary'].includes(key) ? 500 : 0);
+  }, ['baseUrl', 'apiKey', 'model', 'chatModel', 'polishBaseUrl', 'polishApiKey', 'vocabulary', 'styleInstructions', 'windowTransparency', 'accentColor'].includes(key) ? 500 : 0);
 }
 
 for (const key of Object.keys(FIELDS)) {
   const node = $(FIELDS[key].el);
   node.addEventListener(FIELDS[key].type === 'text' ? 'input' : 'change', () => scheduleSave(key));
 }
+
+// ---------------- appearance (transparency + primary color) ----------------
+
+// Applies the theme instantly from current control values; the acrylic window
+// material itself is switched by the main process when the setting persists.
+function applyAppearance() {
+  const t = Math.max(0, Math.min(70, Number(readField('windowTransparency')) || 0)) / 100;
+  const root = document.documentElement.style;
+  root.setProperty('--bg-alpha', String(1 - t));
+  root.setProperty('--surface-alpha', String(Math.min(1, 1 - t + 0.08)));
+  $('#transparency-label').textContent = t > 0 ? `${Math.round(t * 100)}%` : 'off';
+
+  let accent = String(readField('accentColor') || '').trim();
+  if (!/^#[0-9a-f]{6}$/i.test(accent)) accent = '#e8e9eb';
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16));
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  root.setProperty('--accent', accent);
+  root.setProperty('--accent-text', luma > 150 ? '#101113' : '#ffffff');
+  root.setProperty('--accent-hover', `color-mix(in srgb, ${accent} 82%, white)`);
+}
+
+$('#set-windowTransparency').addEventListener('input', applyAppearance);
+$('#set-accentColor').addEventListener('input', applyAppearance);
+$('#accent-reset').addEventListener('click', () => {
+  writeField('accentColor', '#e8e9eb');
+  applyAppearance();
+  scheduleSave('accentColor');
+});
+
+// ---------------- dictionary: suggestions ----------------
+
+function renderSuggestions() {
+  const list = $('#suggestion-list');
+  list.innerHTML = '';
+  const entries = Object.entries(settings.dictionarySuggestions || {}).sort((a, b) => b[1] - a[1]);
+  $('#suggestion-empty').hidden = entries.length > 0;
+
+  for (const [word, count] of entries) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+
+    const label = document.createElement('span');
+    label.textContent = word;
+    const times = document.createElement('span');
+    times.className = 'chip-count';
+    times.textContent = `×${count}`;
+
+    const accept = document.createElement('button');
+    accept.className = 'chip-btn accept';
+    accept.title = 'Add to vocabulary';
+    accept.textContent = '+';
+    accept.addEventListener('click', async () => {
+      const vocab = (settings.vocabulary || '').trim();
+      const suggestions = { ...settings.dictionarySuggestions };
+      delete suggestions[word];
+      settings = await window.vaani.setSettings({
+        vocabulary: vocab ? `${vocab}, ${word}` : word,
+        dictionarySuggestions: suggestions
+      });
+      writeField('vocabulary', settings.vocabulary);
+      renderSuggestions();
+      toast(`"${word}" added to vocabulary`);
+    });
+
+    const dismiss = document.createElement('button');
+    dismiss.className = 'chip-btn dismiss';
+    dismiss.title = 'Never suggest this';
+    dismiss.textContent = '×';
+    dismiss.addEventListener('click', async () => {
+      const suggestions = { ...settings.dictionarySuggestions };
+      delete suggestions[word];
+      settings = await window.vaani.setSettings({
+        dictionarySuggestions: suggestions,
+        dictionaryDismissed: [...(settings.dictionaryDismissed || []), word]
+      });
+      renderSuggestions();
+    });
+
+    chip.append(label, times, accept, dismiss);
+    list.appendChild(chip);
+  }
+}
+
+// vocabulary auto-learned in the main process while we're open
+window.vaani.onSettingsChanged(async () => {
+  const { settings: fresh } = await window.vaani.getSettings();
+  settings = fresh;
+  renderSuggestions();
+  const vocabEl = $('#set-vocabulary');
+  if (document.activeElement !== vocabEl) writeField('vocabulary', settings.vocabulary);
+});
 
 // ---------------- list editors (corrections / tone profiles / snippets) ----------------
 
@@ -301,6 +525,46 @@ function deleteButton(onClick) {
   del.addEventListener('click', onClick);
   return del;
 }
+
+function renderReplacements() {
+  const list = $('#repl-list');
+  list.innerHTML = '';
+  replacements.forEach((rule, i) => {
+    const row = document.createElement('div');
+    row.className = 'repl-row';
+    const from = document.createElement('span');
+    from.className = 'repl-text';
+    from.textContent = rule.from;
+    const arrow = document.createElement('span');
+    arrow.className = 'repl-arrow';
+    arrow.textContent = '→';
+    const to = document.createElement('span');
+    to.className = 'repl-text';
+    to.textContent = rule.to || '(remove)';
+    row.append(from, arrow, to, deleteButton(async () => {
+      replacements.splice(i, 1);
+      settings = await window.vaani.setSettings({ replacements });
+      renderReplacements();
+    }));
+    list.appendChild(row);
+  });
+}
+
+async function addReplacement() {
+  const fromEl = $('#repl-from');
+  const toEl = $('#repl-to');
+  const from = fromEl.value.trim();
+  if (!from) return;
+  replacements.push({ from, to: toEl.value.trim() });
+  settings = await window.vaani.setSettings({ replacements });
+  fromEl.value = '';
+  toEl.value = '';
+  fromEl.focus();
+  renderReplacements();
+}
+
+$('#repl-add-btn').addEventListener('click', addReplacement);
+$('#repl-to').addEventListener('keydown', (e) => { if (e.key === 'Enter') addReplacement(); });
 
 function renderAppProfiles() {
   const list = $('#profile-list');
@@ -348,7 +612,7 @@ function renderSnippets() {
     trigger.textContent = `“${sn.trigger}”`;
     const preview = document.createElement('div');
     preview.className = 'snippet-body';
-    preview.textContent = sn.text.length > 120 ? sn.text.slice(0, 120) + '…' : sn.text;
+    preview.textContent = sn.text.length > 160 ? sn.text.slice(0, 160) + '…' : sn.text;
     body.append(trigger, preview);
     row.append(body, deleteButton(async () => {
       snippets.splice(i, 1);
@@ -372,54 +636,7 @@ $('#snippet-add-btn').addEventListener('click', async () => {
   renderSnippets();
 });
 
-function renderReplacements() {
-  const list = $('#repl-list');
-  list.innerHTML = '';
-  replacements.forEach((rule, i) => {
-    const row = document.createElement('div');
-    row.className = 'repl-row';
-
-    const from = document.createElement('span');
-    from.className = 'repl-text';
-    from.textContent = rule.from;
-
-    const arrow = document.createElement('span');
-    arrow.className = 'repl-arrow';
-    arrow.textContent = '→';
-
-    const to = document.createElement('span');
-    to.className = 'repl-text';
-    to.textContent = rule.to || '(remove)';
-
-    const del = document.createElement('button');
-    del.className = 'icon-btn delete';
-    del.innerHTML = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
-    del.addEventListener('click', async () => {
-      replacements.splice(i, 1);
-      settings = await window.vaani.setSettings({ replacements });
-      renderReplacements();
-    });
-
-    row.append(from, arrow, to, del);
-    list.appendChild(row);
-  });
-}
-
-async function addReplacement() {
-  const fromEl = $('#repl-from');
-  const toEl = $('#repl-to');
-  const from = fromEl.value.trim();
-  if (!from) return;
-  replacements.push({ from, to: toEl.value.trim() });
-  settings = await window.vaani.setSettings({ replacements });
-  fromEl.value = '';
-  toEl.value = '';
-  fromEl.focus();
-  renderReplacements();
-}
-
-$('#repl-add-btn').addEventListener('click', addReplacement);
-$('#repl-to').addEventListener('keydown', (e) => { if (e.key === 'Enter') addReplacement(); });
+// ---------------- test connection ----------------
 
 $('#btn-test').addEventListener('click', async () => {
   const btn = $('#btn-test');
@@ -436,6 +653,25 @@ $('#btn-test').addEventListener('click', async () => {
   out.className = result.ok ? 'ok' : 'fail';
   btn.disabled = false;
 });
+
+// ---------------- updates ----------------
+
+function showUpdateBanner(version) {
+  $('#update-text').textContent = `VaaniFlow ${version} is ready`;
+  $('#update-banner').hidden = false;
+}
+
+window.vaani.onUpdateReady(showUpdateBanner);
+$('#update-install').addEventListener('click', async () => {
+  const result = await window.vaani.installUpdate();
+  if (!result?.ok) {
+    // nothing actually pending (stale banner) — say so instead of doing nothing
+    $('#update-banner').hidden = true;
+    toast('No update is pending — you are on the latest version.');
+  }
+});
+
+// ---------------- microphones ----------------
 
 async function populateMics() {
   const select = $('#set-mic');
@@ -460,16 +696,6 @@ async function populateMics() {
   }
 }
 
-// ---------------- updates ----------------
-
-function showUpdateBanner(version) {
-  $('#update-text').textContent = `VaaniFlow ${version} is ready`;
-  $('#update-banner').hidden = false;
-}
-
-window.vaani.onUpdateReady(showUpdateBanner);
-$('#update-install').addEventListener('click', () => window.vaani.installUpdate());
-
 // ---------------- init ----------------
 
 (async function init() {
@@ -486,6 +712,7 @@ $('#update-install').addEventListener('click', () => window.vaani.installUpdate(
   }
 
   for (const key of Object.keys(FIELDS)) writeField(key, settings[key]);
+  applyAppearance();
 
   replacements = Array.isArray(settings.replacements) ? settings.replacements : [];
   appProfiles = Array.isArray(settings.appProfiles) ? settings.appProfiles : [];
@@ -493,17 +720,18 @@ $('#update-install').addEventListener('click', () => window.vaani.installUpdate(
   renderReplacements();
   renderAppProfiles();
   renderSnippets();
+  renderSuggestions();
 
   $('#hotkey-fallback').hidden = uiohookAvailable;
   $('#home-hint').textContent = settings.baseUrl
-    ? `Hold ${hotkeyLabels[settings.hotkey] || 'your hotkey'} anywhere and speak.`
+    ? `Hold ${hotkeyLabels[settings.hotkey] || 'your hotkey'} anywhere and speak — everything you dictate lands here.`
     : 'Set your Whisper server URL in Settings to get started.';
 
   renderAll();
   populateMics();
 
   // update may have finished downloading before this window opened
-  window.vaani.getUpdateState().then((s) => { if (s.ready) showUpdateBanner(s.version); });
+  window.vaani.getUpdateState().then((u) => { if (u.ready) showUpdateBanner(u.version); });
 
   if (!settings.baseUrl) showView('settings');
 })();

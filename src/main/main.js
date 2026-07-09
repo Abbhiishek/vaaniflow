@@ -9,6 +9,7 @@ const { createOverlayWindow, createDashboardWindow } = require('./windows');
 const { createTray } = require('./tray');
 const { testConnection } = require('./transcriber');
 const { Updater } = require('./updater');
+const dictionary = require('./dictionary');
 
 const IS_SMOKE = process.argv.includes('--smoke');
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
@@ -32,7 +33,7 @@ if (!app.requestSingleInstanceLock()) {
       dashboardWin.focus();
       return;
     }
-    dashboardWin = createDashboardWindow(ICON_PATH);
+    dashboardWin = createDashboardWindow(ICON_PATH, store.settings);
     dashboardWin.on('closed', () => { dashboardWin = null; });
   }
 
@@ -60,6 +61,12 @@ if (!app.requestSingleInstanceLock()) {
     overlayWin = createOverlayWindow();
     session = new Session({ store, injector, getOverlay: () => overlayWin });
     session.on('history-changed', () => sendToDashboard('history:changed'));
+
+    session.on('transcript-added', (entry) => {
+      if (dictionary.learn(entry.text, store)) {
+        sendToDashboard('settings:changed');
+      }
+    });
 
     hotkeys = new Hotkeys();
     hotkeys.on('primary-down', () => session.onPrimaryDown());
@@ -100,6 +107,15 @@ if (!app.requestSingleInstanceLock()) {
       if (patch.hotkey && patch.hotkey !== prev.hotkey) hotkeys.setHotkey(patch.hotkey);
       if ('launchAtLogin' in patch) {
         app.setLoginItemSettings({ openAtLogin: !!next.launchAtLogin });
+      }
+      if ('windowTransparency' in patch && dashboardWin && !dashboardWin.isDestroyed()) {
+        const acrylic = Number(next.windowTransparency) > 0;
+        try {
+          dashboardWin.setBackgroundMaterial(acrylic ? 'acrylic' : 'none');
+          dashboardWin.setBackgroundColor(acrylic ? '#00000000' : '#0f1011');
+        } catch (err) {
+          console.error('background material:', err.message);
+        }
       }
       return next;
     });
