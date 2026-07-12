@@ -1,14 +1,16 @@
 // Auto-update via GitHub Releases (electron-updater). Only active in the
-// packaged app; in dev it's a no-op. Updates download in the background and
-// install on quit — or immediately when the user clicks the dashboard banner.
+// packaged app; in dev it is a no-op. Updates download in the background and
+// install automatically once dictation is idle, on quit, or immediately when
+// the user clicks the dashboard banner.
 'use strict';
 const { app } = require('electron');
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const AUTO_INSTALL_DELAY_MS = 60 * 1000;
+const AUTO_INSTALL_RETRY_MS = 15 * 1000;
 
-// True when b is a strictly newer x.y.z than a. electron-updater mostly checks
-// this itself, but a stale cached installer can re-fire update-downloaded for
-// the version we're already running — never surface those.
+// True when candidate is a strictly newer x.y.z than current. electron-updater
+// also checks this, but a stale cached installer must never be surfaced or run.
 function isNewerVersion(current, candidate) {
   const parse = (v) => String(v || '').replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
   const [a, b] = [parse(current), parse(candidate)];
@@ -20,10 +22,14 @@ function isNewerVersion(current, candidate) {
 }
 
 class Updater {
-  constructor({ onUpdateReady }) {
+  constructor({ onUpdateReady, canAutoInstall, beforeInstall } = {}) {
     this.onUpdateReady = onUpdateReady;
+    this.canAutoInstall = canAutoInstall || (() => true);
+    this.beforeInstall = beforeInstall || (() => {});
     this.readyVersion = null;
     this.autoUpdater = null;
+    this.installing = false;
+    this.autoInstallTimer = null;
   }
 
   start() {
@@ -37,8 +43,7 @@ class Updater {
     }
     this.autoUpdater = autoUpdater;
     autoUpdater.autoDownload = true;
-    // Install-on-quit only once a genuinely newer version is verified below —
-    // otherwise a stale cached installer can downgrade the app on exit.
+    // Enable install-on-quit only after a genuinely newer download is verified.
     autoUpdater.autoInstallOnAppQuit = false;
 
     autoUpdater.on('update-downloaded', (info) => {
@@ -50,35 +55,78 @@ class Updater {
       this.readyVersion = version;
       autoUpdater.autoInstallOnAppQuit = true;
       this.onUpdateReady?.(this.readyVersion);
+      this._scheduleAutoInstall(AUTO_INSTALL_DELAY_MS);
     });
     autoUpdater.on('error', (err) => {
-      // e.g. repo private / offline — never bother the user about it
+      // Offline/private-repository failures must not interrupt the application.
       console.error('updater:', err.message);
     });
 
     const check = () => autoUpdater.checkForUpdates().catch(() => {});
-    setTimeout(check, 10000); // let startup settle first
-    setInterval(check, CHECK_INTERVAL_MS);
+    const firstCheck = setTimeout(check, 10000);
+    const recurringCheck = setInterval(check, CHECK_INTERVAL_MS);
+    firstCheck.unref?.();
+    recurringCheck.unref?.();
   }
 
   state() {
-    return { ready: !!this.readyVersion, version: this.readyVersion };
+    return {
+      ready: !!this.readyVersion,
+      version: this.readyVersion,
+      installing: this.installing,
+      autoInstall: true
+    };
   }
 
   install() {
-    if (!this.autoUpdater || !this.readyVersion) return { ok: false };
-    // Deferred out of the IPC handler — quitAndInstall tears the app down, and
-    // doing that synchronously inside an ipcMain.handle callback stalls the
-    // quit on Windows. Silent install + force-run brings the new version back.
+    return { ok: this._installNow() };
+  }
+
+  _scheduleAutoInstall(delay) {
+    clearTimeout(this.autoInstallTimer);
+    this.autoInstallTimer = setTimeout(() => {
+      if (!this.autoUpdater || !this.readyVersion || this.installing) return;
+      let safeToInstall = false;
+      try {
+        safeToInstall = !!this.canAutoInstall();
+      } catch (err) {
+        console.error('updater: idle check failed:', err.message);
+      }
+      if (!safeToInstall) {
+        this._scheduleAutoInstall(AUTO_INSTALL_RETRY_MS);
+        return;
+      }
+      this._installNow();
+    }, delay);
+    this.autoInstallTimer.unref?.();
+  }
+
+  _installNow() {
+    if (!this.autoUpdater || !this.readyVersion || this.installing) return false;
+    clearTimeout(this.autoInstallTimer);
+    this.installing = true;
+    try {
+      this.beforeInstall();
+    } catch (err) {
+      this.installing = false;
+      console.error('updater: pre-install flush failed:', err.message);
+      this._scheduleAutoInstall(AUTO_INSTALL_RETRY_MS);
+      return false;
+    }
+
+    // Deferred out of the IPC handler: quitAndInstall tears the app down, and
+    // doing that synchronously inside ipcMain.handle can stall quit on Windows.
     setImmediate(() => {
       try {
         this.autoUpdater.quitAndInstall(true, true);
       } catch (err) {
+        this.installing = false;
         console.error('quitAndInstall failed:', err.message);
+        this._scheduleAutoInstall(AUTO_INSTALL_RETRY_MS);
       }
     });
-    return { ok: true };
+    return true;
   }
 }
 
-module.exports = { Updater };
+module.exports = { Updater, isNewerVersion };

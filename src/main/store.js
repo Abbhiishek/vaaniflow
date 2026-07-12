@@ -5,6 +5,8 @@ const path = require('path');
 const crypto = require('crypto');
 const { dictionarySettingsPatch, migrateLegacyDictionary } = require('./dictionary');
 
+const SETTINGS_SCHEMA_VERSION = 1;
+
 class JsonFile {
   constructor(filePath, fallback) {
     this.filePath = filePath;
@@ -119,6 +121,7 @@ class EditableConfig {
 }
 
 const SETTINGS_DEFAULTS = {
+  settingsSchemaVersion: 0,
   language: 'auto',
   hotkey: 'ctrl+win',
   micDeviceId: 'default',
@@ -162,7 +165,11 @@ const LEGACY_CONFIG_KEYS = [
 
 class Store {
   constructor(userDataDir) {
-    this.settingsFile = new JsonFile(path.join(userDataDir, 'settings.json'), SETTINGS_DEFAULTS);
+    const settingsPath = path.join(userDataDir, 'settings.json');
+    let originalSettings = null;
+    try { originalSettings = fs.readFileSync(settingsPath, 'utf8'); } catch {}
+
+    this.settingsFile = new JsonFile(settingsPath, SETTINGS_DEFAULTS);
     this.historyFile = new JsonFile(path.join(userDataDir, 'history.json'), []);
 
     const legacy = this.settingsFile.data;
@@ -174,6 +181,7 @@ class Store {
       llmDeployment: String(legacy.chatModel || '')
     });
 
+    const previousSchemaVersion = Math.max(0, Number(this.settingsFile.data.settingsSchemaVersion) || 0);
     let migrated = false;
     for (const key of LEGACY_CONFIG_KEYS) {
       if (Object.prototype.hasOwnProperty.call(this.settingsFile.data, key)) {
@@ -186,7 +194,21 @@ class Store {
       Object.assign(this.settingsFile.data, dictionaryMigration.patch);
       migrated = true;
     }
-    if (migrated) this.settingsFile.flush();
+    if (previousSchemaVersion < SETTINGS_SCHEMA_VERSION) {
+      this.settingsFile.data.settingsSchemaVersion = SETTINGS_SCHEMA_VERSION;
+      migrated = true;
+    }
+    if (migrated) {
+      if (originalSettings != null) {
+        const backupPath = path.join(userDataDir, `settings.v${previousSchemaVersion}.backup.json`);
+        if (!fs.existsSync(backupPath)) {
+          try { fs.writeFileSync(backupPath, originalSettings); } catch (err) {
+            console.error('store: failed to back up settings before migration', err.message);
+          }
+        }
+      }
+      this.settingsFile.flush();
+    }
   }
 
   get settings() {
@@ -273,5 +295,6 @@ module.exports = {
   SETTINGS_DEFAULTS,
   CONFIG_DEFAULTS,
   EditableConfig,
-  ConfigurationError
+  ConfigurationError,
+  SETTINGS_SCHEMA_VERSION
 };

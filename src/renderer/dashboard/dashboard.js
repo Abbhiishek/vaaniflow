@@ -801,7 +801,7 @@ $('#btn-test').addEventListener('click', async () => {
 // ---------------- updates ----------------
 
 function showUpdateBanner(version) {
-  $('#update-text').textContent = `Vaani ${version} is ready`;
+  $('#update-text').textContent = `Vaani ${version} is ready and will restart when idle`;
   $('#update-banner').hidden = false;
 }
 

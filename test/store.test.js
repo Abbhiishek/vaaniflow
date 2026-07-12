@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { Store } = require('../src/main/store');
+const { Store, SETTINGS_SCHEMA_VERSION } = require('../src/main/store');
 
 function tempUserData(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vaaniflow-test-'));
@@ -76,4 +76,21 @@ test('migrates the legacy vocabulary and corrections into dictionary entries', (
       { from: 'BTW', to: 'by the way' }
     ]
   );
+});
+
+test('versions settings migrations and preserves a pre-migration backup', (t) => {
+  const dir = tempUserData(t);
+  const settingsPath = path.join(dir, 'settings.json');
+  const legacy = JSON.stringify({ hotkey: 'ctrl+win', vocabulary: 'Vaani' }, null, 2);
+  fs.writeFileSync(settingsPath, legacy);
+
+  const store = new Store(dir);
+  assert.equal(store.settings.settingsSchemaVersion, SETTINGS_SCHEMA_VERSION);
+
+  const backupPath = path.join(dir, 'settings.v0.backup.json');
+  assert.equal(fs.readFileSync(backupPath, 'utf8'), legacy);
+
+  const firstBackupMtime = fs.statSync(backupPath).mtimeMs;
+  new Store(dir);
+  assert.equal(fs.statSync(backupPath).mtimeMs, firstBackupMtime);
 });

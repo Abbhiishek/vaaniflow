@@ -151,8 +151,9 @@ fails to load, the app falls back to an F9 toggle via Electron's `globalShortcut
 npm run dist   # local build: NSIS installer in dist/
 ```
 
-Releases are automated: push a version tag and GitHub Actions builds the installer and
-publishes it to [GitHub Releases](https://github.com/Abbhiishek/vaaniflow/releases).
+Releases are automated: push a version tag and GitHub Actions verifies that the tag,
+package files, stable Windows identity, and updater metadata agree before publishing
+the installer to [GitHub Releases](https://github.com/Abbhiishek/vaaniflow/releases).
 
 ```bash
 npm version patch        # bumps package.json + creates the tag
@@ -160,8 +161,13 @@ git push --follow-tags   # CI builds and publishes the release
 ```
 
 The installed app checks for updates on startup (and every 4 hours), downloads them in
-the background, and shows a "Restart to update" banner in the dashboard. Updates also
-apply automatically on the next app restart.
+the background, and shows a "Restart to update" banner in the dashboard. A downloaded
+update installs automatically after a one-minute grace period once dictation is idle;
+the banner can install it immediately, and quitting the app also applies it.
+
+User data remains under AppData rather than the installation directory. Startup
+migrations are versioned, run before the UI opens, and preserve a pre-migration
+`settings.vN.backup.json`, so releases that change persisted data can update safely.
 
 > Auto-update reads release assets anonymously, so it requires the repo to be public.
 > While the repo is private, updates fail silently and the app keeps working.

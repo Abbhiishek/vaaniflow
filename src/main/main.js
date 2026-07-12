@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, ipcMain, clipboard, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, shell, nativeImage } = require('electron');
 const { Store } = require('./store');
 const { Injector } = require('./injector');
 const { Hotkeys, HOTKEY_LABELS, uiohookAvailable } = require('./hotkeys');
@@ -14,7 +14,20 @@ const dictionary = require('./dictionary');
 
 const IS_SMOKE = process.argv.includes('--smoke');
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'vaani.png');
-const APP_USER_MODEL_ID = 'com.vaani.app';
+// Keep the original identity stable across the VaaniFlow -> Vaani rename so
+// Windows upgrades the existing install and refreshes its shortcut/taskbar icon.
+const APP_USER_MODEL_ID = 'com.vaani.flow';
+
+function loadAppIcon(size) {
+  try {
+    let image = nativeImage.createFromBuffer(fs.readFileSync(ICON_PATH));
+    if (size && !image.isEmpty()) image = image.resize({ width: size, height: size, quality: 'best' });
+    return image;
+  } catch (err) {
+    console.error('icon: failed to load', err.message);
+    return nativeImage.createEmpty();
+  }
+}
 
 function migrateLegacyUserData(userDataDir) {
   const appDataDir = app.getPath('appData');
@@ -56,7 +69,7 @@ if (!app.requestSingleInstanceLock()) {
       dashboardWin.focus();
       return;
     }
-    dashboardWin = createDashboardWindow(ICON_PATH, store.settings);
+    dashboardWin = createDashboardWindow(loadAppIcon(), store.settings);
     dashboardWin.on('closed', () => { dashboardWin = null; });
   }
 
@@ -107,13 +120,28 @@ if (!app.requestSingleInstanceLock()) {
     hotkeys.start(store.settings.hotkey);
 
     tray = createTray({
+      icon: loadAppIcon(32),
       onToggleDictation: () => session.toggle(),
       onOpenDashboard: openDashboard,
       onQuit: () => app.quit()
     });
 
+    // Main-process hot reload does not recreate Tray/BrowserWindow instances.
+    // Refresh the live icons when the source asset changes during development.
+    if (!app.isPackaged) {
+      fs.watchFile(ICON_PATH, { interval: 500 }, (current, previous) => {
+        if (current.mtimeMs === previous.mtimeMs && current.size === previous.size) return;
+        const windowIcon = loadAppIcon();
+        const trayIcon = loadAppIcon(32);
+        if (tray && !tray.isDestroyed() && !trayIcon.isEmpty()) tray.setImage(trayIcon);
+        if (dashboardWin && !dashboardWin.isDestroyed() && !windowIcon.isEmpty()) dashboardWin.setIcon(windowIcon);
+      });
+    }
+
     updater = new Updater({
-      onUpdateReady: (version) => sendToDashboard('update:ready', version)
+      onUpdateReady: (version) => sendToDashboard('update:ready', version),
+      canAutoInstall: () => session?.uiState?.()?.state === 'idle',
+      beforeInstall: () => store?.flush()
     });
     updater.start();
 
@@ -243,6 +271,7 @@ if (!app.requestSingleInstanceLock()) {
     try { hotkeys?.stop(); } catch {}
     try { injector?.stop(); } catch {}
     try { store?.flush(); } catch {}
+    try { fs.unwatchFile(ICON_PATH); } catch {}
     if (overlayWin && !overlayWin.isDestroyed()) {
       overlayWin.destroy(); // closable:false — must destroy explicitly
     }
