@@ -216,8 +216,14 @@ class Hotkeys extends EventEmitter {
         this.comboActive = true;
         this.emit('primary-down');
       } else if (this.comboActive && !this._isComboKey(code)) {
-        // combo+other key = an app shortcut (e.g. Ctrl+Shift+T), not dictation
-        this.emit('intrude');
+        if (UiohookKey && code === UiohookKey.Space) {
+          // Space while the shortcut is held locks push-to-talk into hands-free.
+          // Emit on key-down so releasing the shortcut cannot win the race.
+          this.emit('space');
+        } else {
+          // combo+other key = an app shortcut (e.g. Ctrl+Shift+T), not dictation
+          this.emit('intrude');
+        }
       }
     } else {
       this.pressed.delete(code);
@@ -226,7 +232,6 @@ class Hotkeys extends EventEmitter {
         this.emit('primary-up');
       }
       if (UiohookKey) {
-        if (code === UiohookKey.Space) this.emit('space');
         if (code === UiohookKey.Escape) this.emit('escape');
       }
     }

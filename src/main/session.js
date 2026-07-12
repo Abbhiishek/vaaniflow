@@ -2,6 +2,7 @@
 //
 //   idle ──hotkey down──▶ recording(ptt)
 //     recording: released within TAP_MS  ──▶ recording(handsfree)
+//     recording(ptt): Space while held ──▶ recording(handsfree)
 //     recording(ptt): released after TAP_MS ──▶ processing
 //     recording(handsfree): Space / hotkey tap / widget click / silence ──▶ processing
 //     recording: Esc / widget ✕ ──▶ idle (discard)
@@ -167,10 +168,14 @@ class Session extends EventEmitter {
   }
 
   onSpace() {
-    if (this.state === 'recording' && this.mode === 'handsfree') {
-      this.endedViaSpace = true;
-      this.stop();
+    if (this.state !== 'recording') return;
+    this.endedViaSpace = true;
+    if (this.mode === 'ptt') {
+      this.mode = 'handsfree';
+      this._sendOverlay({ type: 'mode', mode: 'handsfree' });
+      return;
     }
+    this.stop();
   }
 
   onEscape() {

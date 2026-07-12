@@ -49,3 +49,38 @@ test('shortcut capture suspension prevents accidental dictation', () => {
   for (const slot of combo.slots) hotkeys._onKey(slot[0], true);
   assert.equal(triggered, false);
 });
+
+test('Space locks an active shortcut without emitting an intrusion', () => {
+  const hotkeys = new Hotkeys();
+  hotkeys.hotkeyId = 'right-ctrl';
+  const combo = resolveHotkey(hotkeys.hotkeyId);
+  const spaceCode = resolveHotkey('custom:Alt+Space').slots.at(-1)[0];
+  const events = [];
+  hotkeys.on('primary-down', () => events.push('down'));
+  hotkeys.on('space', () => events.push('space'));
+  hotkeys.on('intrude', () => events.push('intrude'));
+  hotkeys.on('primary-up', () => events.push('up'));
+
+  hotkeys._onKey(combo.slots[0][0], true);
+  hotkeys._onKey(spaceCode, true);
+  assert.deepEqual(events, ['down', 'space'], 'Space is handled immediately on key-down');
+  hotkeys._onKey(combo.slots[0][0], false);
+  hotkeys._onKey(spaceCode, false);
+
+  assert.deepEqual(events, ['down', 'space', 'up']);
+});
+
+test('Space remains usable as the primary key in a custom shortcut', () => {
+  const hotkeys = new Hotkeys();
+  hotkeys.hotkeyId = 'custom:Alt+Space';
+  const combo = resolveHotkey(hotkeys.hotkeyId);
+  const events = [];
+  hotkeys.on('primary-down', () => events.push('down'));
+  hotkeys.on('primary-up', () => events.push('up'));
+  hotkeys.on('space', () => events.push('space'));
+
+  for (const slot of combo.slots) hotkeys._onKey(slot[0], true);
+  hotkeys._onKey(combo.slots.at(-1)[0], false);
+
+  assert.deepEqual(events, ['down', 'up']);
+});

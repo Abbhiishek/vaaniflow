@@ -36,6 +36,40 @@ test('shortcut press starts the Vaani widget with live settings', async () => {
   session.onAudioError('test complete');
 });
 
+test('Space locks push-to-talk into hands-free until the shortcut is pressed again', async () => {
+  const messages = [];
+  const dashboardStates = [];
+  const overlay = { isDestroyed: () => false, webContents: { send: (channel, payload) => messages.push({ channel, payload }) } };
+  const session = new Session({
+    store: {},
+    injector: { foreground: async () => null },
+    getOverlay: () => overlay,
+    getRuntimeSettings: () => ({ sounds: false }),
+    systemAudio: null
+  });
+  session.on('ui-state', (payload) => dashboardStates.push(payload));
+
+  session.onPrimaryDown();
+  session.onSpace();
+  assert.equal(session.state, 'recording');
+  assert.equal(session.mode, 'handsfree');
+  assert.equal(session.endedViaSpace, true);
+  assert.deepEqual(messages.at(-1), {
+    channel: 'session',
+    payload: { type: 'mode', mode: 'handsfree' }
+  });
+  assert.deepEqual(dashboardStates.at(-1), { type: 'mode', mode: 'handsfree' });
+
+  session.onPrimaryUp();
+  assert.equal(session.state, 'recording', 'releasing the original shortcut does not stop a locked recording');
+
+  session.onPrimaryDown();
+  await nextTurn();
+  assert.equal(session.state, 'processing');
+  assert.equal(messages.at(-1).payload.type, 'processing');
+  session.onAudioError('test complete');
+});
+
 test('music mute is applied after the start cue and restored before processing', async () => {
   const actions = [];
   const overlay = { isDestroyed: () => false, webContents: { send: (channel, payload) => actions.push(payload.type) } };
