@@ -9,6 +9,69 @@
 <body>
   <div id="titlebar"><span>Vaani</span></div>
 
+  <section id="welcome-screen" class="welcome-screen" aria-labelledby="welcome-title" hidden>
+    <div class="welcome-glow welcome-glow-one" aria-hidden="true"></div>
+    <div class="welcome-glow welcome-glow-two" aria-hidden="true"></div>
+    <div class="welcome-checkfield" aria-hidden="true">
+      <span class="welcome-checkline checkline-one"><i></i><b></b></span>
+      <span class="welcome-checkline checkline-two"><i></i><b></b></span>
+      <span class="welcome-checkline checkline-three"><i></i><b></b></span>
+      <span class="welcome-checkline checkline-four"><i></i><b></b></span>
+    </div>
+
+    <div class="welcome-copy">
+      <div class="welcome-brand-mark" aria-hidden="true">
+        <img src="../../../assets/vaani.png" alt="" />
+      </div>
+      <span class="welcome-eyebrow">Voice, ready everywhere</span>
+      <h1 id="welcome-title">Vaani</h1>
+      <p>Fast system-wide voice dictation for Windows.</p>
+      <button id="welcome-get-started" class="welcome-cta" type="button">
+        <span>Get Started</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m13.2 5.3 1.4-1.4 8.1 8.1-8.1 8.1-1.4-1.4 5.7-5.7H2v-2h16.9z"/></svg>
+      </button>
+      <span class="welcome-footnote"><i></i> One shortcut. Every text field.</span>
+    </div>
+
+    <div class="welcome-collage" aria-label="A preview of Vaani features">
+      <article class="welcome-feature feature-dictate">
+        <div class="feature-topline"><span>DICTATE ANYWHERE</span><i class="feature-live-dot"></i></div>
+        <div class="dictation-window">
+          <div class="mock-appbar"><span class="mock-app-icon">N</span><b>Project notes</b><i></i><i></i><i></i></div>
+          <p>Capture ideas as fast as you can say them<span class="typing-caret"></span></p>
+        </div>
+        <div class="voice-strip">
+          <span class="voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <strong>Listening</strong>
+          <kbd>Ctrl + Win</kbd>
+        </div>
+        <span class="feature-check" aria-hidden="true">✓</span>
+      </article>
+
+      <article class="welcome-feature feature-cleanup">
+        <div class="feature-topline"><span>SMART CLEANUP</span><small>Automatic</small></div>
+        <div class="cleanup-copy cleanup-before"><i></i><span>um can you like send the update</span></div>
+        <div class="cleanup-route" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+        <div class="cleanup-copy cleanup-after"><i>✓</i><strong>Can you send the update?</strong></div>
+      </article>
+
+      <article class="welcome-feature feature-style">
+        <div class="feature-topline"><span>APP-AWARE TONE</span><small>Adapts live</small></div>
+        <div class="style-apps" aria-hidden="true">
+          <span class="style-app active">S</span><span class="style-app">G</span><span class="style-app">T</span>
+        </div>
+        <div class="tone-message"><span>Slack</span><p>Quick update — the new flow is ready for review.</p></div>
+        <div class="tone-pills"><span>Clear</span><span>Casual</span><span>Concise</span></div>
+      </article>
+
+      <article class="welcome-feature feature-dictionary">
+        <div class="dictionary-mini-mark" aria-hidden="true">Aa</div>
+        <div><span>PERSONAL DICTIONARY</span><strong>Your words, spelled right.</strong></div>
+        <span class="dictionary-example">vani <i>→</i> Vaani <b>✓</b></span>
+      </article>
+    </div>
+  </section>
+
   <div id="app">
     <nav id="sidebar">
       <div id="logo">

@@ -222,6 +222,9 @@ if (!app.requestSingleInstanceLock()) {
         },
         systemStatus: {
           launchAtLogin: app.getLoginItemSettings().openAtLogin
+        },
+        environment: {
+          isPackaged: app.isPackaged
         }
       };
     });
@@ -234,7 +237,7 @@ if (!app.requestSingleInstanceLock()) {
         delete nextPatch.hotkey;
       }
       if (nextPatch.hotkey) hotkeys.setSuspended(false);
-      const immediatePersistence = ['hotkey', 'profileFirstName', 'profileLastName', 'profileEmail', 'profilePicture']
+      const immediatePersistence = ['hotkey', 'profileFirstName', 'profileLastName', 'profileEmail', 'profilePicture', 'onboardingCompleted']
         .some((key) => Object.prototype.hasOwnProperty.call(nextPatch, key));
       const next = store.updateSettings(nextPatch, { flush: immediatePersistence });
       if ('launchAtLogin' in nextPatch) {

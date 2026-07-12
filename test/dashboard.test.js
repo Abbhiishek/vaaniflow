@@ -14,6 +14,27 @@ test('dashboard JavaScript only references IDs present in the HTML', () => {
   assert.deepEqual(missing, []);
 });
 
+test('first-run welcome screen is animated, persistent, and forced only in development', () => {
+  const root = path.join(__dirname, '..', 'src');
+  const html = fs.readFileSync(path.join(root, 'renderer', 'dashboard', 'dashboard.html'), 'utf8');
+  const js = fs.readFileSync(path.join(root, 'renderer', 'dashboard', 'dashboard.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'renderer', 'dashboard', 'dashboard.css'), 'utf8');
+  const main = fs.readFileSync(path.join(root, 'main', 'main.js'), 'utf8');
+
+  assert.match(html, /id="welcome-screen"/);
+  assert.match(html, /Fast system-wide voice dictation for Windows\./);
+  assert.match(html, /id="welcome-get-started"[\s\S]*Get Started/);
+  assert.match(html, /feature-dictate[\s\S]*feature-cleanup[\s\S]*feature-style[\s\S]*feature-dictionary/);
+  assert.match(css, /linear-gradient\(124deg/);
+  assert.match(css, /welcome-checkline/);
+  assert.match(css, /@keyframes welcome-wave/);
+  assert.match(js, /const FORCE_WELCOME_IN_DEVELOPMENT = true/);
+  assert.match(js, /FORCE_WELCOME_IN_DEVELOPMENT && environment\.isPackaged === false/);
+  assert.match(js, /!settings\.onboardingCompleted && !configInfo\?\.configured/);
+  assert.match(js, /setSettings\(\{ onboardingCompleted: true \}\)/);
+  assert.match(main, /'onboardingCompleted'/);
+});
+
 test('style app logos are bundled local SVG assets', () => {
   const root = path.join(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'src', 'renderer', 'dashboard', 'dashboard.html'), 'utf8');

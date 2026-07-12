@@ -10,6 +10,11 @@ let configInfo = null;
 let lastAppView = 'home';
 let hotkeyLabels = {};
 
+// Keep this enabled while developing the onboarding experience. It only
+// forces the welcome screen in unpackaged builds; production still shows it
+// once, when provider configuration is missing.
+const FORCE_WELCOME_IN_DEVELOPMENT = true;
+
 const SETTINGS_CATEGORIES = new Set(['general', 'system', 'appearance', 'provider', 'account']);
 
 // ---------------- navigation ----------------
@@ -48,6 +53,22 @@ function routeFromLocation() {
   else showView(route.replace(/^\//, '') || 'home');
 }
 
+function showWelcomeScreen() {
+  document.body.classList.add('welcome-mode');
+  $('#welcome-screen').hidden = false;
+  requestAnimationFrame(() => $('#welcome-screen').classList.add('welcome-ready'));
+  setTimeout(() => $('#welcome-get-started').focus(), 450);
+}
+
+function hideWelcomeScreen() {
+  $('#welcome-screen').classList.add('welcome-leaving');
+  setTimeout(() => {
+    $('#welcome-screen').hidden = true;
+    $('#welcome-screen').classList.remove('welcome-ready', 'welcome-leaving');
+    document.body.classList.remove('welcome-mode');
+  }, 360);
+}
+
 $$('.nav-item').forEach((btn) => btn.addEventListener('click', () => navigateTo(btn.dataset.view)));
 $$('.settings-nav-item').forEach((btn) => btn.addEventListener('click', () => navigateTo('settings', btn.dataset.settingsCategory)));
 $('#settings-back').addEventListener('click', () => navigateTo(lastAppView));
@@ -56,6 +77,19 @@ $('#settings-profile-summary').addEventListener('click', () => navigateTo('setti
 window.addEventListener('hashchange', routeFromLocation);
 
 $('#btn-dictate').addEventListener('click', () => window.vaani.toggleDictation());
+$('#welcome-get-started').addEventListener('click', async () => {
+  const button = $('#welcome-get-started');
+  button.disabled = true;
+  try {
+    if (!settings.onboardingCompleted) {
+      settings = await window.vaani.setSettings({ onboardingCompleted: true });
+    }
+  } finally {
+    hideWelcomeScreen();
+    navigateTo('home');
+    setTimeout(() => { button.disabled = false; }, 400);
+  }
+});
 
 // ---------------- toast ----------------
 
@@ -1486,7 +1520,7 @@ if (navigator.mediaDevices?.addEventListener) {
 
 (async function init() {
   const result = await window.vaani.getSettings();
-  const { settings: s, uiohookAvailable, capabilities = {}, systemStatus = {} } = result;
+  const { settings: s, uiohookAvailable, capabilities = {}, systemStatus = {}, environment = {} } = result;
   hotkeyLabels = result.hotkeyLabels || {};
   settings = s;
   history = await window.vaani.getHistory();
@@ -1538,6 +1572,8 @@ if (navigator.mediaDevices?.addEventListener) {
   // update may have finished downloading before this window opened
   window.vaani.getUpdateState().then((u) => { if (u.ready) showUpdateBanner(u.version); });
 
-  if (!configInfo?.configured && !window.location.hash) navigateTo('settings', 'provider');
+  const forceWelcome = FORCE_WELCOME_IN_DEVELOPMENT && environment.isPackaged === false;
+  const needsWelcome = !settings.onboardingCompleted && !configInfo?.configured;
+  if (forceWelcome || needsWelcome) showWelcomeScreen();
   else routeFromLocation();
 })();

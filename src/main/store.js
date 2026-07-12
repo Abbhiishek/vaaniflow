@@ -129,6 +129,7 @@ class EditableConfig {
 
 const SETTINGS_DEFAULTS = {
   settingsSchemaVersion: 0,
+  onboardingCompleted: false,
   language: 'auto',
   appLanguage: 'en',
   hotkey: 'ctrl+win',

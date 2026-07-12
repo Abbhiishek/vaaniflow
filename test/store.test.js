@@ -130,11 +130,19 @@ test('repairs persisted dictionary entries that have no stable IDs', (t) => {
 
 test('provides defaults for per-category styles and global cleanup', (t) => {
   const store = new Store(tempUserData(t));
+  assert.equal(store.settings.onboardingCompleted, false);
   assert.equal(store.settings.personalStyle, 'casual');
   assert.equal(store.settings.workStyle, 'casual');
   assert.equal(store.settings.emailStyle, 'formal');
   assert.equal(store.settings.otherStyle, 'formal');
   assert.equal(store.settings.cleanupLevel, 'light');
+});
+
+test('persists completion of the first-run welcome screen', (t) => {
+  const dir = tempUserData(t);
+  const store = new Store(dir);
+  store.updateSettings({ onboardingCompleted: true }, { flush: true });
+  assert.equal(new Store(dir).settings.onboardingCompleted, true);
 });
 
 test('saved account profile survives a full store restart', (t) => {
