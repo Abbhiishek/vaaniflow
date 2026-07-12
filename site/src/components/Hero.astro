@@ -1,0 +1,167 @@
+---
+import ButtonLink from './ButtonLink.astro';
+import TranscriptRail from './TranscriptRail.astro';
+import { siteConfig } from '../config';
+---
+
+<section class="hero shell" id="top" aria-labelledby="hero-title">
+  <div class="hero__intro">
+    <p class="mono-label">Vaani for Windows · Open-source dictation</p>
+    <p class="hero__index" aria-hidden="true">01 / Voice to text</p>
+  </div>
+
+  <div class="hero__grid">
+    <h1 id="hero-title">Speak. Vaani writes <span>where your cursor is.</span></h1>
+
+    <div class="hero__copy">
+      <p>
+        Hold a shortcut, speak naturally, and release. Vaani transcribes into the Windows app you are already using, with optional cleanup, app-aware writing styles, dictionary terms, and reusable snippets.
+      </p>
+      <div class="hero__actions">
+        <ButtonLink href={siteConfig.downloadUrl} variant="primary" downloadAction>
+          <svg slot="icon" aria-hidden="true" viewBox="0 0 24 24" width="19" height="19">
+            <path fill="currentColor" d="M3 5.1 10.4 4v7.1H3V5.1Zm8.2-1.2L21 2.5v8.6h-9.8V3.9ZM3 12h7.4v7.1L3 18V12Zm8.2 0H21v8.6l-9.8-1.4V12Z"></path>
+          </svg>
+          Download for Windows
+        </ButtonLink>
+        <ButtonLink href={siteConfig.githubUrl} variant="secondary" external>
+          View source
+        </ButtonLink>
+      </div>
+      <p class="hero__requirements">
+        Windows 10/11 <span>·</span> Your own Azure OpenAI Whisper deployment <span>·</span> Optional language model for cleanup and styles
+      </p>
+    </div>
+  </div>
+
+  <TranscriptRail />
+</section>
+
+<style>
+  .hero {
+    padding-block: clamp(4.75rem, 8vw, 8.5rem) var(--space-8);
+  }
+
+  .hero__intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .hero__intro p {
+    margin: 0;
+  }
+
+  .hero__index {
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+  }
+
+  .hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(290px, 0.55fr);
+    gap: clamp(3rem, 7vw, 7.5rem);
+    align-items: end;
+    padding-top: var(--space-6);
+  }
+
+  h1 {
+    max-width: 950px;
+    margin-bottom: 0;
+    font-size: var(--text-h1);
+    font-variation-settings: 'wdth' 84;
+    font-weight: 620;
+    letter-spacing: -0.075em;
+    line-height: 0.88;
+  }
+
+  h1 span {
+    display: block;
+    color: transparent;
+    -webkit-text-stroke: 1.2px #cbd1d4;
+  }
+
+  .hero__copy {
+    padding-bottom: 0.35rem;
+  }
+
+  .hero__copy > p:first-child {
+    margin-bottom: 0;
+    color: var(--color-graphite);
+    font-size: var(--text-lead);
+    line-height: 1.55;
+  }
+
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+  }
+
+  .hero__requirements {
+    margin: var(--space-4) 0 0;
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    line-height: 1.65;
+  }
+
+  .hero__requirements span {
+    margin-inline: 0.35rem;
+    color: var(--color-rule);
+  }
+
+  @media (max-width: 1050px) {
+    .hero__grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-6);
+    }
+
+    .hero__copy {
+      display: grid;
+      max-width: 760px;
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 719px) {
+    .hero {
+      padding-top: var(--space-7);
+    }
+
+    .hero__intro {
+      align-items: flex-start;
+      padding-bottom: var(--space-4);
+    }
+
+    .hero__index {
+      display: none;
+    }
+
+    .hero__grid {
+      padding-top: var(--space-5);
+    }
+
+    h1 {
+      font-size: clamp(3.35rem, 17vw, 5.5rem);
+      line-height: 0.9;
+    }
+
+    .hero__actions,
+    .hero__actions :global(.button) {
+      width: 100%;
+    }
+  }
+
+  @media (forced-colors: active) {
+    h1 span {
+      color: CanvasText;
+      -webkit-text-stroke: 0;
+    }
+  }
+</style>

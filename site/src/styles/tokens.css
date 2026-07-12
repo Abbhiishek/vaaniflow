@@ -1,0 +1,56 @@
+:root {
+  color-scheme: dark;
+  --color-void: #080a0b;
+  --color-paper: #0d0f10;
+  --color-white: #171a1c;
+  --color-elevated: #1d2023;
+  --color-ink: #f2f4f5;
+  --color-graphite: #d2d7da;
+  --color-steel: #9aa3aa;
+  --color-rule: #363c40;
+  --color-soft-rule: #252a2d;
+  --color-danger: #ff8e8e;
+
+  --font-display: 'Archivo Variable', 'Arial Narrow', 'Segoe UI', sans-serif;
+  --font-body: 'Manrope Variable', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Cascadia Mono', monospace;
+
+  --text-display: clamp(4rem, 9.5vw, 9rem);
+  --text-h1: clamp(3.6rem, 7vw, 7.4rem);
+  --text-h2: clamp(2.6rem, 5vw, 5.4rem);
+  --text-h3: clamp(1.5rem, 2.3vw, 2.4rem);
+  --text-lead: clamp(1.08rem, 1.6vw, 1.32rem);
+  --text-body: 1rem;
+  --text-small: 0.82rem;
+  --text-label: 0.74rem;
+
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+  --space-7: 4.5rem;
+  --space-8: 6rem;
+  --space-9: 8rem;
+  --space-10: 11rem;
+
+  --shell: min(1240px, calc(100% - 64px));
+  --header-height: 76px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 26px;
+  --shadow-soft: 0 26px 80px rgba(0, 0, 0, 0.38);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-base: 260ms;
+}
+
+@media (max-width: 719px) {
+  :root {
+    --shell: min(100% - 32px, 1240px);
+    --header-height: 68px;
+    --space-9: 6rem;
+    --space-10: 7.5rem;
+  }
+}
