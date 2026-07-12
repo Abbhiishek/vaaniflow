@@ -32,13 +32,23 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Generate icons
-        run: npm run icons
-
-      - name: Build and publish installer
-        run: npx electron-builder --win --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build installer
+        run: npm run dist
 
       - name: Verify updater artifacts
         run: npm run verify:release -- artifacts
+
+      - name: Publish release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "v$v"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            # Keep a new release invisible to auto-updaters until every asset is present.
+            gh release create $tag --title "Vaani $v" --generate-notes --draft
+          }
+          gh release upload $tag "dist/Vaani-Setup-$v.exe" "dist/Vaani-Setup-$v.exe.blockmap" "dist/latest.yml" --clobber
+          gh release edit $tag --title "Vaani $v" --draft=false --latest
