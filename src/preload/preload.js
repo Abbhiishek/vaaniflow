@@ -35,8 +35,13 @@ contextBridge.exposeInMainWorld('vaani', {
 
   // overlay
   onSession: (cb) => ipcRenderer.on('session', (e, payload) => cb(payload)),
+  onOverlayPosition: (cb) => ipcRenderer.on('overlay:position', (e, position) => cb(position)),
+  onOverlayGuide: (cb) => ipcRenderer.on('overlay-guide:update', (e, payload) => cb(payload)),
   setHover: (hovering) => ipcRenderer.send('overlay:hover', !!hovering),
   overlayAction: (action) => ipcRenderer.send('overlay:action', action),
+  beginOverlayDrag: (point) => ipcRenderer.send('overlay:drag-start', point),
+  moveOverlayDrag: (point) => ipcRenderer.send('overlay:drag-move', point),
+  endOverlayDrag: (point) => ipcRenderer.send('overlay:drag-end', point),
   sendAudio: (arrayBuffer, meta) => ipcRenderer.send('audio:data', arrayBuffer, meta),
   sendAudioChunk: (arrayBuffer) => ipcRenderer.send('audio:chunk', arrayBuffer),
   sendAudioError: (message) => ipcRenderer.send('audio:error', message)

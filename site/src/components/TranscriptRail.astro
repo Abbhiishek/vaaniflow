@@ -1,0 +1,328 @@
+---
+const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36, 14];
+---
+
+<figure class="transcript-rail">
+  <div class="transcript-rail__labels" aria-hidden="true">
+    <span>Voice signal</span>
+    <span>Vaani</span>
+    <span>Inserted at cursor</span>
+  </div>
+
+  <div class="transcript-rail__track" aria-hidden="true">
+    <div class="signal">
+      <span class="signal__baseline"></span>
+      <div class="signal__bars">
+        {bars.map((height, index) => (
+          <i style={`--height: ${height}%; --delay: ${index * 32}ms`}></i>
+        ))}
+      </div>
+      <p>“um could you send the revised plan tomorrow morning”</p>
+    </div>
+
+    <div class="rail-cursor">
+      <span class="rail-cursor__line"></span>
+      <div>
+        <b>clean</b>
+        <b>shape</b>
+        <b>insert</b>
+      </div>
+    </div>
+
+    <div class="sentence">
+      <p>Could you send the revised plan tomorrow morning?</p>
+      <span class="sentence__caret"></span>
+    </div>
+  </div>
+
+  <figcaption>
+    Vaani turns a spoken thought into readable text and inserts it into the Windows field you are already using.
+  </figcaption>
+</figure>
+
+<style>
+  .transcript-rail {
+    margin: var(--space-8) 0 0;
+    border-block: 1px solid var(--color-rule);
+  }
+
+  .transcript-rail__labels,
+  .transcript-rail__track {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) 190px minmax(0, 1.15fr);
+  }
+
+  .transcript-rail__labels {
+    min-height: 48px;
+    align-items: center;
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .transcript-rail__labels span:nth-child(2) {
+    text-align: center;
+  }
+
+  .transcript-rail__labels span:last-child {
+    text-align: right;
+  }
+
+  .transcript-rail__track {
+    min-height: 250px;
+    border-top: 1px solid var(--color-soft-rule);
+    background: rgba(255, 255, 255, 0.018);
+  }
+
+  .signal,
+  .sentence,
+  .rail-cursor {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .signal {
+    padding: var(--space-5) var(--space-6) var(--space-5) 0;
+  }
+
+  .signal__baseline {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--color-rule);
+  }
+
+  .signal__bars {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    height: 96px;
+    align-items: center;
+    gap: clamp(4px, 0.55vw, 8px);
+  }
+
+  .signal__bars i {
+    width: 100%;
+    height: var(--height);
+    min-height: 3px;
+    transform: scaleY(0.35);
+    border-radius: 100px;
+    background: var(--color-ink);
+    transform-origin: center;
+    animation: signal-build 700ms var(--delay) var(--ease-out) forwards;
+  }
+
+  .signal p {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 0;
+    max-width: 92%;
+    margin: 0;
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    line-height: 1.5;
+  }
+
+  .rail-cursor {
+    justify-content: center;
+    border-inline: 1px solid var(--color-rule);
+    background: var(--color-white);
+  }
+
+  .rail-cursor__line {
+    width: 4px;
+    height: 132px;
+    border-radius: 99px;
+    background: var(--color-ink);
+    animation: cursor-scan 1.8s 350ms var(--ease-out) both;
+  }
+
+  .rail-cursor div {
+    position: absolute;
+    display: grid;
+    gap: 0.35rem;
+    padding-left: 3.3rem;
+  }
+
+  .rail-cursor b {
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .sentence {
+    padding: var(--space-5) 0 var(--space-5) var(--space-6);
+  }
+
+  .sentence p {
+    max-width: 570px;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3.2vw, 3.4rem);
+    font-variation-settings: 'wdth' 90;
+    font-weight: 570;
+    letter-spacing: -0.055em;
+    line-height: 1.02;
+    animation: sentence-in 850ms 500ms var(--ease-out) both;
+  }
+
+  .sentence__caret {
+    width: 3px;
+    height: 3.4rem;
+    margin-left: 0.35rem;
+    background: var(--color-ink);
+    animation: caret-blink 1s 1.3s steps(1) infinite;
+  }
+
+  figcaption {
+    max-width: 700px;
+    margin: 0;
+    padding: var(--space-4) 0;
+    color: var(--color-steel);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  @keyframes signal-build {
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes cursor-scan {
+    0% {
+      opacity: 0;
+      transform: translateX(-34px) scaleY(0.4);
+    }
+    45% {
+      opacity: 1;
+      transform: translateX(0) scaleY(1);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scaleY(0.72);
+    }
+  }
+
+  @keyframes sentence-in {
+    from {
+      opacity: 0;
+      transform: translateX(-18px);
+      filter: blur(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes caret-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .transcript-rail__labels,
+    .transcript-rail__track {
+      grid-template-columns: minmax(0, 1fr) 142px minmax(0, 1fr);
+    }
+
+    .signal,
+    .sentence {
+      padding-inline: var(--space-4);
+    }
+
+    .signal p {
+      left: var(--space-4);
+    }
+
+    .rail-cursor div {
+      display: none;
+    }
+  }
+
+  @media (max-width: 719px) {
+    .transcript-rail {
+      margin-top: var(--space-7);
+    }
+
+    .transcript-rail__labels {
+      display: none;
+    }
+
+    .transcript-rail__track {
+      grid-template-columns: 1fr;
+      min-height: 0;
+    }
+
+    .signal,
+    .sentence,
+    .rail-cursor {
+      min-height: 180px;
+      padding: var(--space-5) var(--space-3);
+    }
+
+    .signal {
+      border-bottom: 1px solid var(--color-rule);
+    }
+
+    .signal p {
+      right: var(--space-3);
+      left: var(--space-3);
+    }
+
+    .rail-cursor {
+      min-height: 78px;
+      border-inline: 0;
+      border-bottom: 1px solid var(--color-rule);
+    }
+
+    .rail-cursor__line {
+      width: 112px;
+      height: 3px;
+    }
+
+    .rail-cursor::after {
+      margin-left: var(--space-3);
+      color: var(--color-steel);
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      content: 'Vaani processes';
+    }
+
+    .sentence {
+      min-height: 210px;
+    }
+
+    .sentence p {
+      font-size: clamp(2rem, 10vw, 3rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .signal__bars i,
+    .rail-cursor__line,
+    .sentence p,
+    .sentence__caret {
+      opacity: 1;
+      transform: none;
+      filter: none;
+      animation: none;
+    }
+  }
+</style>

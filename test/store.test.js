@@ -136,6 +136,7 @@ test('provides defaults for per-category styles and global cleanup', (t) => {
   assert.equal(store.settings.emailStyle, 'formal');
   assert.equal(store.settings.otherStyle, 'formal');
   assert.equal(store.settings.cleanupLevel, 'light');
+  assert.equal(store.settings.overlayPosition, 'bottom-center');
 });
 
 test('persists completion of the first-run welcome screen', (t) => {

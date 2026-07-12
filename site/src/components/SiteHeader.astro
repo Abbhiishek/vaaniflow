@@ -1,0 +1,166 @@
+---
+import Brand from './Brand.astro';
+import ButtonLink from './ButtonLink.astro';
+import { navigation } from '../data/home';
+import { siteConfig } from '../config';
+---
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand-link" href="#top">
+      <Brand descriptor />
+    </a>
+
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <div class="desktop-nav__links">
+        {navigation.map((item) => <a href={item.href}>{item.label}</a>)}
+        <a href={siteConfig.githubUrl} target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+      <ButtonLink href={siteConfig.downloadUrl} variant="primary" downloadAction>
+        Download Vaani
+      </ButtonLink>
+    </nav>
+
+    <details class="mobile-nav">
+      <summary aria-label="Open navigation">
+        <span></span><span></span>
+        <span class="visually-hidden">Menu</span>
+      </summary>
+      <nav aria-label="Mobile navigation" onclick="requestAnimationFrame(() => this.closest('details')?.removeAttribute('open'))">
+        {navigation.map((item) => <a href={item.href}>{item.label}</a>)}
+        <a href={siteConfig.githubUrl} target="_blank" rel="noreferrer">GitHub</a>
+        <ButtonLink href={siteConfig.downloadUrl} variant="primary" downloadAction>
+          Download Vaani
+        </ButtonLink>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    z-index: 100;
+    top: 0;
+    min-height: var(--header-height);
+    border-bottom: 1px solid rgba(54, 60, 64, 0.9);
+    background: rgba(13, 15, 16, 0.9);
+    backdrop-filter: blur(18px);
+  }
+
+  .header-inner {
+    display: flex;
+    min-height: var(--header-height);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+  }
+
+  .brand-link {
+    position: relative;
+    z-index: 2;
+  }
+
+  .desktop-nav,
+  .desktop-nav__links {
+    display: flex;
+    align-items: center;
+  }
+
+  .desktop-nav {
+    gap: var(--space-5);
+  }
+
+  .desktop-nav__links {
+    gap: clamp(1.15rem, 2vw, 2rem);
+    color: var(--color-steel);
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .desktop-nav__links a {
+    transition: color var(--duration-fast) ease;
+  }
+
+  .desktop-nav__links a:hover {
+    color: var(--color-ink);
+  }
+
+  .mobile-nav {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .desktop-nav {
+      display: none;
+    }
+
+    .mobile-nav {
+      display: block;
+    }
+
+    .mobile-nav summary {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-content: center;
+      gap: 7px;
+      border: 1px solid var(--color-rule);
+      border-radius: var(--radius-sm);
+      background: var(--color-white);
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .mobile-nav summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .mobile-nav summary span:not(.visually-hidden) {
+      display: block;
+      width: 18px;
+      height: 1px;
+      background: var(--color-ink);
+      transition: transform var(--duration-fast) ease;
+    }
+
+    .mobile-nav[open] summary span:first-child {
+      transform: translateY(4px) rotate(45deg);
+    }
+
+    .mobile-nav[open] summary span:nth-child(2) {
+      transform: translateY(-4px) rotate(-45deg);
+    }
+
+    .mobile-nav nav {
+      position: absolute;
+      top: calc(100% + 1px);
+      right: 0;
+      left: 0;
+      display: grid;
+      gap: 0;
+      padding: 0 var(--space-5) var(--space-5);
+      border-bottom: 1px solid var(--color-rule);
+      background: var(--color-paper);
+      box-shadow: 0 24px 54px rgba(0, 0, 0, 0.46);
+    }
+
+    .mobile-nav nav > a:not(:last-child) {
+      min-height: 52px;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--color-soft-rule);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .mobile-nav :global(.button) {
+      margin-top: var(--space-4);
+    }
+  }
+
+  @media (max-width: 719px) {
+    .mobile-nav nav {
+      padding-inline: 16px;
+    }
+  }
+</style>

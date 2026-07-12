@@ -166,6 +166,7 @@ const SETTINGS_DEFAULTS = {
   snippets: [], // [{ id, trigger, text, createdAt, updatedAt }] — local text expansions
   windowTransparency: 0, // 0–100% acrylic see-through on the dashboard (0 = solid)
   accentColor: '#e8e9eb', // primary color for buttons, toggles, charts, heatmap
+  overlayPosition: 'bottom-center', // one of the eight snap points around the active screen
   autoLearnVocabulary: true, // auto-import repeated proper nouns/acronyms
   dictionarySuggestions: {}, // internal candidate counts kept for auto-learning
   dictionaryDismissed: [], // legacy rejected candidates

@@ -1,12 +1,13 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, ipcMain, clipboard, shell, Menu, Notification, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, shell, Menu, Notification, nativeImage, screen } = require('electron');
 const { Store } = require('./store');
 const { Injector } = require('./injector');
 const { Hotkeys, HOTKEY_LABELS, uiohookAvailable, hotkeyLabel, isValidHotkeyId } = require('./hotkeys');
 const { Session } = require('./session');
-const { createOverlayWindow, createDashboardWindow } = require('./windows');
+const { createOverlayWindow, createOverlayGuideWindow, createDashboardWindow, positionOverlay } = require('./windows');
+const { nearestOverlayPosition, normalizeOverlayPosition } = require('./overlay-position');
 const { createTray } = require('./tray');
 const { testConnection } = require('./transcriber');
 const { Updater } = require('./updater');
@@ -60,6 +61,8 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   let overlayWin = null;
+  let overlayGuideWin = null;
+  let overlayDrag = null;
   let dashboardWin = null;
   let tray = null;
   let store = null;
@@ -91,6 +94,41 @@ if (!app.requestSingleInstanceLock()) {
     if (overlayWin && !overlayWin.isDestroyed()) {
       overlayWin.webContents.send(channel, ...args);
     }
+  }
+
+  function overlayPointer(payload) {
+    const x = Number(payload?.screenX);
+    const y = Number(payload?.screenY);
+    return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+  }
+
+  function sendOverlayGuideState() {
+    if (!overlayDrag || !overlayGuideWin || overlayGuideWin.isDestroyed() || overlayGuideWin.webContents.isLoading()) return;
+    overlayGuideWin.webContents.send('overlay-guide:update', {
+      position: overlayDrag.nearest,
+      accentColor: store.settings.accentColor
+    });
+  }
+
+  function showOverlayGuide(display) {
+    if (!overlayGuideWin || overlayGuideWin.isDestroyed()) return;
+    overlayGuideWin.setBounds(display.workArea);
+    if (!overlayGuideWin.isVisible()) overlayGuideWin.showInactive();
+    sendOverlayGuideState();
+    if (overlayWin && !overlayWin.isDestroyed()) overlayWin.moveTop();
+  }
+
+  function finishOverlayDrag(payload) {
+    if (!overlayDrag || !overlayWin || overlayWin.isDestroyed()) return;
+    const point = overlayPointer(payload) || overlayDrag.lastPoint;
+    const display = screen.getDisplayNearestPoint(point);
+    const position = nearestOverlayPosition(display.workArea, point);
+    overlayDrag = null;
+    store.updateSettings({ overlayPosition: position }, { flush: true });
+    positionOverlay(overlayWin, position, display);
+    overlayWin.setIgnoreMouseEvents(true, { forward: true });
+    if (overlayGuideWin && !overlayGuideWin.isDestroyed()) overlayGuideWin.hide();
+    broadcastSettingsChanged();
   }
 
   function broadcastSettingsChanged() {
@@ -146,7 +184,9 @@ if (!app.requestSingleInstanceLock()) {
       cb(permission === 'media');
     });
 
-    overlayWin = createOverlayWindow();
+    overlayWin = createOverlayWindow(() => store.settings.overlayPosition);
+    overlayGuideWin = createOverlayGuideWindow();
+    overlayGuideWin.webContents.on('did-finish-load', sendOverlayGuideState);
     session = new Session({
       store,
       injector,
@@ -238,6 +278,7 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle('settings:set', (e, patch) => {
       const prev = { ...store.settings };
       const nextPatch = patch && typeof patch === 'object' ? { ...patch } : {};
+      if ('overlayPosition' in nextPatch) nextPatch.overlayPosition = normalizeOverlayPosition(nextPatch.overlayPosition);
       if (nextPatch.hotkey && !isValidHotkeyId(nextPatch.hotkey)) delete nextPatch.hotkey;
       if (nextPatch.hotkey && nextPatch.hotkey !== prev.hotkey && !hotkeys.setHotkey(nextPatch.hotkey)) {
         delete nextPatch.hotkey;
@@ -250,6 +291,7 @@ if (!app.requestSingleInstanceLock()) {
         app.setLoginItemSettings({ openAtLogin: !!next.launchAtLogin });
       }
       if ('showInDock' in nextPatch) applyDockVisibility(next.showInDock !== false);
+      if ('overlayPosition' in nextPatch) positionOverlay(overlayWin, next.overlayPosition);
       if ('windowTransparency' in nextPatch && dashboardWin && !dashboardWin.isDestroyed()) {
         const acrylic = Number(next.windowTransparency) > 0;
         try {
@@ -343,6 +385,40 @@ if (!app.requestSingleInstanceLock()) {
       else if (action === 'stop') session.stop();
       else if (action === 'cancel') session.cancel();
     });
+    ipcMain.on('overlay:drag-start', (e, payload) => {
+      if (!overlayWin || overlayWin.isDestroyed() || e.sender !== overlayWin.webContents) return;
+      const point = overlayPointer(payload);
+      if (!point) return;
+      const bounds = overlayWin.getBounds();
+      const display = screen.getDisplayNearestPoint(point);
+      overlayDrag = {
+        offsetX: point.x - bounds.x,
+        offsetY: point.y - bounds.y,
+        displayId: display.id,
+        nearest: nearestOverlayPosition(display.workArea, point),
+        lastPoint: point
+      };
+      overlayWin.setIgnoreMouseEvents(false);
+      showOverlayGuide(display);
+    });
+    ipcMain.on('overlay:drag-move', (e, payload) => {
+      if (!overlayDrag || !overlayWin || overlayWin.isDestroyed() || e.sender !== overlayWin.webContents) return;
+      const point = overlayPointer(payload);
+      if (!point) return;
+      overlayDrag.lastPoint = point;
+      overlayWin.setPosition(Math.round(point.x - overlayDrag.offsetX), Math.round(point.y - overlayDrag.offsetY), false);
+      const display = screen.getDisplayNearestPoint(point);
+      const nearest = nearestOverlayPosition(display.workArea, point);
+      const displayChanged = display.id !== overlayDrag.displayId;
+      const targetChanged = nearest !== overlayDrag.nearest;
+      overlayDrag.displayId = display.id;
+      overlayDrag.nearest = nearest;
+      if (displayChanged) showOverlayGuide(display);
+      else if (targetChanged) sendOverlayGuideState();
+    });
+    ipcMain.on('overlay:drag-end', (e, payload) => {
+      if (e.sender === overlayWin?.webContents) finishOverlayDrag(payload);
+    });
     ipcMain.on('audio:chunk', (e, wavArrayBuffer) => session.onAudioChunk(wavArrayBuffer));
     ipcMain.on('audio:data', (e, wavArrayBuffer, meta) => session.onAudioData(wavArrayBuffer, meta || {}));
     ipcMain.on('audio:error', (e, message) => session.onAudioError(message));
@@ -380,6 +456,7 @@ if (!app.requestSingleInstanceLock()) {
     try { store?.flush(); } catch {}
     try { if (store) fs.unwatchFile(store.configPath); } catch {}
     try { fs.unwatchFile(ICON_PATH); } catch {}
+    if (overlayGuideWin && !overlayGuideWin.isDestroyed()) overlayGuideWin.destroy();
     if (overlayWin && !overlayWin.isDestroyed()) {
       overlayWin.destroy(); // closable:false — must destroy explicitly
     }
