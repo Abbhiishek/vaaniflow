@@ -12,13 +12,17 @@ const { testConnection } = require('./transcriber');
 const { Updater } = require('./updater');
 const { SystemAudioMute } = require('./system-audio');
 const { crossedWordMilestones, milestoneMessage } = require('./milestones');
+const { PRODUCT_NAME, appUserModelId, shouldManageLoginItem } = require('./app-identity');
 const dictionary = require('./dictionary');
 
 const IS_SMOKE = process.argv.includes('--smoke');
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'vaani.png');
 // Keep the original identity stable across the VaaniFlow -> Vaani rename so
 // Windows upgrades the existing install and refreshes its shortcut/taskbar icon.
-const APP_USER_MODEL_ID = 'com.vaani.flow';
+const APP_USER_MODEL_ID = appUserModelId(app.isPackaged);
+const MANAGES_LOGIN_ITEM = shouldManageLoginItem(app.isPackaged, IS_SMOKE);
+
+app.setName(PRODUCT_NAME);
 
 function loadAppIcon(size) {
   try {
@@ -128,7 +132,7 @@ if (!app.requestSingleInstanceLock()) {
     const userDataDir = app.getPath('userData');
     migrateLegacyUserData(userDataDir);
     store = new Store(userDataDir);
-    if (!IS_SMOKE) app.setLoginItemSettings({ openAtLogin: !!store.settings.launchAtLogin });
+    if (MANAGES_LOGIN_ITEM) app.setLoginItemSettings({ openAtLogin: !!store.settings.launchAtLogin });
     injector = new Injector();
     injector.start();
     systemAudio = new SystemAudioMute();
@@ -221,7 +225,9 @@ if (!app.requestSingleInstanceLock()) {
           notifications: Notification.isSupported()
         },
         systemStatus: {
-          launchAtLogin: app.getLoginItemSettings().openAtLogin
+          launchAtLogin: MANAGES_LOGIN_ITEM
+            ? app.getLoginItemSettings().openAtLogin
+            : !!store.settings.launchAtLogin
         },
         environment: {
           isPackaged: app.isPackaged
@@ -240,7 +246,7 @@ if (!app.requestSingleInstanceLock()) {
       const immediatePersistence = ['hotkey', 'profileFirstName', 'profileLastName', 'profileEmail', 'profilePicture', 'onboardingCompleted']
         .some((key) => Object.prototype.hasOwnProperty.call(nextPatch, key));
       const next = store.updateSettings(nextPatch, { flush: immediatePersistence });
-      if ('launchAtLogin' in nextPatch) {
+      if ('launchAtLogin' in nextPatch && MANAGES_LOGIN_ITEM) {
         app.setLoginItemSettings({ openAtLogin: !!next.launchAtLogin });
       }
       if ('showInDock' in nextPatch) applyDockVisibility(next.showInDock !== false);
