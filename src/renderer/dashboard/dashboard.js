@@ -361,7 +361,6 @@ const FIELDS = {
   language: { el: '#set-language', type: 'select' },
   micDeviceId: { el: '#set-mic', type: 'select' },
   hotkey: { el: '#set-hotkey', type: 'select' },
-  vocabulary: { el: '#set-vocabulary', type: 'text' },
   autoLearnVocabulary: { el: '#set-autoLearnVocabulary', type: 'bool' },
   polishTimeoutSec: { el: '#set-polishTimeoutSec', type: 'select' },
   defaultTone: { el: '#set-defaultTone', type: 'select' },
@@ -406,7 +405,7 @@ function scheduleSave(key) {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     settings = await window.vaani.setSettings(readSettingsPatch());
-  }, ['vocabulary', 'styleInstructions', 'windowTransparency', 'accentColor'].includes(key) ? 500 : 0);
+  }, ['styleInstructions', 'windowTransparency', 'accentColor'].includes(key) ? 500 : 0);
 }
 
 for (const key of Object.keys(FIELDS)) {
@@ -442,72 +441,235 @@ $('#accent-reset').addEventListener('click', () => {
   scheduleSave('accentColor');
 });
 
-// ---------------- dictionary: suggestions ----------------
+// ---------------- personal dictionary ----------------
 
-function renderSuggestions() {
-  const list = $('#suggestion-list');
+let dictionaryEntries = [];
+let editingDictionaryId = null;
+let pendingDictionaryDeleteId = null;
+
+function syncDictionaryEntries() {
+  dictionaryEntries = (Array.isArray(settings.dictionaryEntries) ? settings.dictionaryEntries : [])
+    .filter((entry) => entry && entry.from)
+    .map((entry) => ({ ...entry, to: String(entry.to ?? entry.from) }));
+}
+
+function dictionaryAction(label, path, onClick, className = '') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `dictionary-action ${className}`.trim();
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.innerHTML = `<svg viewBox="0 0 24 24"><path fill="currentColor" d="${path}"/></svg>`;
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function renderDictionary() {
+  const list = $('#dict-list');
+  const empty = $('#dict-empty');
+  const query = $('#dict-search').value.trim().toLocaleLowerCase();
+  const sort = $('#dict-sort').value;
+  const filtered = dictionaryEntries.filter((entry) => {
+    if (!query) return true;
+    return `${entry.from} ${entry.to}`.toLocaleLowerCase().includes(query);
+  });
+
+  filtered.sort((a, b) => {
+    if (sort === 'alpha') return String(a.to || a.from).localeCompare(String(b.to || b.from));
+    if (sort === 'recent') return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    return Number(!!b.starred) - Number(!!a.starred)
+      || Number(b.createdAt || 0) - Number(a.createdAt || 0);
+  });
+
+  const count = dictionaryEntries.length;
+  $('#dict-count').textContent = query ? `${filtered.length} of ${count}` : `${count} ${count === 1 ? 'entry' : 'entries'}`;
   list.innerHTML = '';
-  const entries = Object.entries(settings.dictionarySuggestions || {}).sort((a, b) => b[1] - a[1]);
-  $('#suggestion-empty').hidden = entries.length > 0;
+  empty.hidden = filtered.length > 0;
 
-  for (const [word, count] of entries) {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
+  if (!filtered.length) {
+    const searching = !!query && count > 0;
+    $('#dict-empty-title').textContent = searching ? 'No matching entries' : 'Your words will live here';
+    $('#dict-empty-copy').textContent = searching
+      ? 'Try another spelling or clear the search.'
+      : 'Add a name, phrase, or replacement and VaaniFlow will use it on your next dictation.';
+    $('#dict-empty-add').textContent = searching ? 'Clear search' : 'Add your first entry';
+    return;
+  }
 
-    const label = document.createElement('span');
-    label.textContent = word;
-    const times = document.createElement('span');
-    times.className = 'chip-count';
-    times.textContent = `×${count}`;
-
-    const accept = document.createElement('button');
-    accept.className = 'chip-btn accept';
-    accept.title = 'Add to vocabulary';
-    accept.textContent = '+';
-    accept.addEventListener('click', async () => {
-      const vocab = (settings.vocabulary || '').trim();
-      const suggestions = { ...settings.dictionarySuggestions };
-      delete suggestions[word];
-      settings = await window.vaani.setSettings({
-        vocabulary: vocab ? `${vocab}, ${word}` : word,
-        dictionarySuggestions: suggestions
-      });
-      writeField('vocabulary', settings.vocabulary);
-      renderSuggestions();
-      toast(`"${word}" added to vocabulary`);
+  for (const entry of filtered) {
+    const row = document.createElement('div');
+    row.className = `dictionary-entry${entry.starred ? ' starred' : ''}`;
+    row.tabIndex = 0;
+    row.addEventListener('dblclick', () => openDictionaryEditor(entry));
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') openDictionaryEditor(entry);
     });
 
-    const dismiss = document.createElement('button');
-    dismiss.className = 'chip-btn dismiss';
-    dismiss.title = 'Never suggest this';
-    dismiss.textContent = '×';
-    dismiss.addEventListener('click', async () => {
-      const suggestions = { ...settings.dictionarySuggestions };
-      delete suggestions[word];
-      settings = await window.vaani.setSettings({
-        dictionarySuggestions: suggestions,
-        dictionaryDismissed: [...(settings.dictionaryDismissed || []), word]
-      });
-      renderSuggestions();
-    });
+    const text = document.createElement('div');
+    text.className = 'dictionary-entry-text';
+    const phrase = document.createElement('div');
+    phrase.className = 'dictionary-entry-phrase';
+    if (entry.from === entry.to) {
+      phrase.textContent = entry.to;
+    } else {
+      const from = document.createElement('span');
+      from.textContent = entry.from;
+      const arrow = document.createElement('span');
+      arrow.className = 'dictionary-entry-arrow';
+      arrow.textContent = '→';
+      const to = document.createElement('strong');
+      to.textContent = entry.to || '(remove)';
+      phrase.append(from, arrow, to);
+    }
+    const meta = document.createElement('div');
+    meta.className = 'dictionary-entry-meta';
+    const kind = entry.from === entry.to ? 'Exact spelling' : 'Replacement';
+    const source = entry.source === 'learned' ? 'learned automatically' : entry.source === 'imported' ? 'imported' : 'personal';
+    meta.textContent = `${kind} · ${source}`;
+    text.append(phrase, meta);
 
-    chip.append(label, times, accept, dismiss);
-    list.appendChild(chip);
+    const actions = document.createElement('div');
+    actions.className = 'dictionary-actions';
+    actions.append(
+      dictionaryAction('Edit entry', 'M3 17.3V21h3.7L17.8 9.9l-3.7-3.7L3 17.3zm17.7-10.2a1 1 0 0 0 0-1.4l-2.4-2.4a1 1 0 0 0-1.4 0L15 5.2l3.7 3.7 2-1.8z', () => openDictionaryEditor(entry)),
+      dictionaryAction('Delete entry', 'M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zm3.5-9h1.5v7H9.5v-7zm3.5 0h1.5v7H13v-7zM15.5 4l-1-1h-5l-1 1H5v2h14V4h-3.5z', () => openDictionaryDelete(entry), 'delete'),
+      dictionaryAction(entry.starred ? 'Remove priority' : 'Prioritize entry', 'm12 17.3-6.2 3.3 1.2-7L2 8.7l7-1L12 1.3l3.1 6.4 7 .9-5.1 5 1.2 7-6.2-3.3z', () => toggleDictionaryStar(entry.id), entry.starred ? 'star active' : 'star')
+    );
+    row.append(text, actions);
+    list.appendChild(row);
   }
 }
 
-// vocabulary auto-learned in the main process while we're open
+function showDictionaryError(message) {
+  const error = $('#dict-editor-error');
+  error.textContent = message;
+  error.hidden = !message;
+}
+
+function openDictionaryEditor(entry = null, seed = null) {
+  editingDictionaryId = entry?.id || null;
+  $('#dict-editor-title').textContent = entry ? 'Edit entry' : 'Add an entry';
+  const from = entry ? (entry.from === entry.to ? '' : entry.from) : (seed?.from || '');
+  const to = entry ? entry.to : (seed?.to || '');
+  $('#dict-from').value = from;
+  $('#dict-to').value = to;
+  $('#dict-starred').checked = !!entry?.starred;
+  showDictionaryError('');
+  $('#dict-editor-backdrop').hidden = false;
+  requestAnimationFrame(() => (to ? $('#dict-from') : $('#dict-to')).focus());
+}
+
+function closeDictionaryEditor() {
+  editingDictionaryId = null;
+  $('#dict-editor-backdrop').hidden = true;
+  showDictionaryError('');
+}
+
+async function saveDictionaryEntries(nextEntries, message) {
+  settings = await window.vaani.setSettings({ dictionaryEntries: nextEntries });
+  syncDictionaryEntries();
+  renderDictionary();
+  if (message) toast(message);
+}
+
+async function toggleDictionaryStar(id) {
+  const next = dictionaryEntries.map((entry) => entry.id === id
+    ? { ...entry, starred: !entry.starred }
+    : entry);
+  const starred = next.find((entry) => entry.id === id)?.starred;
+  await saveDictionaryEntries(next, starred ? 'Entry prioritized' : 'Priority removed');
+}
+
+function openDictionaryDelete(entry) {
+  pendingDictionaryDeleteId = entry.id;
+  const label = entry.from === entry.to ? entry.to : `${entry.from} → ${entry.to}`;
+  $('#dict-delete-copy').textContent = `“${label}” will be removed permanently.`;
+  $('#dict-delete-backdrop').hidden = false;
+  requestAnimationFrame(() => $('#dict-delete-confirm').focus());
+}
+
+function closeDictionaryDelete() {
+  pendingDictionaryDeleteId = null;
+  $('#dict-delete-backdrop').hidden = true;
+}
+
+$('#dict-editor').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const to = $('#dict-to').value.replace(/\s+/g, ' ').trim();
+  const from = $('#dict-from').value.replace(/\s+/g, ' ').trim() || to;
+  if (!to) return showDictionaryError('Enter how VaaniFlow should write this term.');
+  const duplicate = dictionaryEntries.find((entry) => entry.id !== editingDictionaryId
+    && entry.from.toLocaleLowerCase() === from.toLocaleLowerCase());
+  if (duplicate) return showDictionaryError(`“${from}” is already in your dictionary.`);
+
+  const existing = dictionaryEntries.find((entry) => entry.id === editingDictionaryId);
+  const value = {
+    ...(existing || {}),
+    from,
+    to,
+    starred: $('#dict-starred').checked,
+    source: existing?.source || 'manual',
+    createdAt: existing?.createdAt || Date.now()
+  };
+  const next = existing
+    ? dictionaryEntries.map((entry) => entry.id === existing.id ? value : entry)
+    : [...dictionaryEntries, value];
+  await saveDictionaryEntries(next, existing ? 'Dictionary entry updated' : 'Added to your dictionary');
+  closeDictionaryEditor();
+});
+
+$('#dict-add-btn').addEventListener('click', () => openDictionaryEditor());
+$('#dict-empty-add').addEventListener('click', () => {
+  if ($('#dict-search').value) {
+    $('#dict-search').value = '';
+    renderDictionary();
+  } else openDictionaryEditor();
+});
+$('#dict-search').addEventListener('input', renderDictionary);
+$('#dict-sort').addEventListener('change', renderDictionary);
+$('#dict-editor-close').addEventListener('click', closeDictionaryEditor);
+$('#dict-editor-cancel').addEventListener('click', closeDictionaryEditor);
+$('#dict-delete-close').addEventListener('click', closeDictionaryDelete);
+$('#dict-delete-cancel').addEventListener('click', closeDictionaryDelete);
+$('#dict-delete-confirm').addEventListener('click', async () => {
+  if (!pendingDictionaryDeleteId) return;
+  const next = dictionaryEntries.filter((entry) => entry.id !== pendingDictionaryDeleteId);
+  await saveDictionaryEntries(next, 'Dictionary entry deleted');
+  closeDictionaryDelete();
+});
+
+$$('.dict-example').forEach((button) => button.addEventListener('click', () => {
+  openDictionaryEditor(null, { from: button.dataset.from, to: button.dataset.to });
+}));
+
+for (const backdrop of [$('#dict-editor-backdrop'), $('#dict-delete-backdrop')]) {
+  backdrop.addEventListener('mousedown', (event) => {
+    if (event.target !== backdrop) return;
+    if (backdrop === $('#dict-editor-backdrop')) closeDictionaryEditor();
+    else closeDictionaryDelete();
+  });
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!$('#dict-delete-backdrop').hidden) closeDictionaryDelete();
+  else if (!$('#dict-editor-backdrop').hidden) closeDictionaryEditor();
+});
+
+// The main process emits this when automatic learning imports a new entry.
 window.vaani.onSettingsChanged(async () => {
   const { settings: fresh } = await window.vaani.getSettings();
   settings = fresh;
-  renderSuggestions();
-  const vocabEl = $('#set-vocabulary');
-  if (document.activeElement !== vocabEl) writeField('vocabulary', settings.vocabulary);
+  writeField('autoLearnVocabulary', settings.autoLearnVocabulary);
+  syncDictionaryEntries();
+  renderDictionary();
 });
 
-// ---------------- list editors (corrections / tone profiles / snippets) ----------------
+// ---------------- list editors (tone profiles / snippets) ----------------
 
-let replacements = [];
 let appProfiles = [];
 let snippets = [];
 
@@ -518,46 +680,6 @@ function deleteButton(onClick) {
   del.addEventListener('click', onClick);
   return del;
 }
-
-function renderReplacements() {
-  const list = $('#repl-list');
-  list.innerHTML = '';
-  replacements.forEach((rule, i) => {
-    const row = document.createElement('div');
-    row.className = 'repl-row';
-    const from = document.createElement('span');
-    from.className = 'repl-text';
-    from.textContent = rule.from;
-    const arrow = document.createElement('span');
-    arrow.className = 'repl-arrow';
-    arrow.textContent = '→';
-    const to = document.createElement('span');
-    to.className = 'repl-text';
-    to.textContent = rule.to || '(remove)';
-    row.append(from, arrow, to, deleteButton(async () => {
-      replacements.splice(i, 1);
-      settings = await window.vaani.setSettings({ replacements });
-      renderReplacements();
-    }));
-    list.appendChild(row);
-  });
-}
-
-async function addReplacement() {
-  const fromEl = $('#repl-from');
-  const toEl = $('#repl-to');
-  const from = fromEl.value.trim();
-  if (!from) return;
-  replacements.push({ from, to: toEl.value.trim() });
-  settings = await window.vaani.setSettings({ replacements });
-  fromEl.value = '';
-  toEl.value = '';
-  fromEl.focus();
-  renderReplacements();
-}
-
-$('#repl-add-btn').addEventListener('click', addReplacement);
-$('#repl-to').addEventListener('keydown', (e) => { if (e.key === 'Enter') addReplacement(); });
 
 function renderAppProfiles() {
   const list = $('#profile-list');
@@ -737,13 +859,12 @@ async function populateMics() {
   applyAppearance();
   await refreshConfigInfo();
 
-  replacements = Array.isArray(settings.replacements) ? settings.replacements : [];
+  syncDictionaryEntries();
   appProfiles = Array.isArray(settings.appProfiles) ? settings.appProfiles : [];
   snippets = Array.isArray(settings.snippets) ? settings.snippets : [];
-  renderReplacements();
+  renderDictionary();
   renderAppProfiles();
   renderSnippets();
-  renderSuggestions();
 
   $('#hotkey-fallback').hidden = uiohookAvailable;
   $('#home-hint').textContent = configInfo?.configured

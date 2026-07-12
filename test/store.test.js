@@ -58,3 +58,22 @@ test('surfaces invalid config JSON without preventing Store construction', (t) =
   fs.writeFileSync(path.join(dir, 'config.json'), '{ invalid json');
   assert.throws(() => store.runtimeSettings(), /Could not read config\.json/);
 });
+
+test('migrates the legacy vocabulary and corrections into dictionary entries', (t) => {
+  const dir = tempUserData(t);
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({
+    vocabulary: 'Abhishek, VaaniFlow',
+    replacements: [{ from: 'BTW', to: 'by the way' }]
+  }));
+
+  const store = new Store(dir);
+  assert.equal(store.settings.dictionarySchemaVersion, 1);
+  assert.deepEqual(
+    store.settings.dictionaryEntries.map(({ from, to }) => ({ from, to })),
+    [
+      { from: 'Abhishek', to: 'Abhishek' },
+      { from: 'VaaniFlow', to: 'VaaniFlow' },
+      { from: 'BTW', to: 'by the way' }
+    ]
+  );
+});

@@ -1,5 +1,6 @@
 // Cleans raw Whisper output: artifacts, spoken commands, snippets, corrections.
 'use strict';
+const { preferredTerms } = require('./dictionary');
 
 // non-speech annotations whisper.cpp likes to emit
 const NOISE_WORDS = /^(blank[_ ]?audio|music|upbeat music|applause|laugh(ter|s|ing)?|chuckles?|noise|silence|silent|inaudible|indistinct|cough(s|ing)?|clears? throat|sigh(s|ing)?|breath(es|ing)?|sniff(s|ing)?|sneezes?|beep(s|ing)?|static|typing|clicking|door .*|footsteps|birds? chirping|wind blowing|speaking foreign language|foreign language|no audio|no speech)$/i;
@@ -48,13 +49,18 @@ function cleanArtifacts(text) {
 // rules: [{ from, to }] — case-insensitive; whole-word when the pattern looks word-like
 function applyReplacements(text, rules) {
   let t = String(text || '');
-  for (const rule of rules || []) {
+  const ordered = [...(Array.isArray(rules) ? rules : [])]
+    .sort((a, b) => String(b?.from || '').length - String(a?.from || '').length);
+  for (const rule of ordered) {
     const from = String(rule?.from || '').trim();
     if (!from) continue;
     const esc = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const wordLike = /^\w/.test(from) && /\w$/.test(from);
+    const wordLike = /^[\p{L}\p{N}_]/u.test(from) && /[\p{L}\p{N}_]$/u.test(from);
     try {
-      t = t.replace(new RegExp(wordLike ? `\\b${esc}\\b` : esc, 'gi'), String(rule.to ?? ''));
+      const pattern = wordLike
+        ? `(?<![\\p{L}\\p{N}_])${esc}(?![\\p{L}\\p{N}_])`
+        : esc;
+      t = t.replace(new RegExp(pattern, 'giu'), String(rule.to ?? ''));
     } catch {}
   }
   return tidy(t);
@@ -119,16 +125,21 @@ function expandSnippets(text, snippets) {
 // from the previous chunk (keeps chunked transcriptions coherent at boundaries).
 // Whisper keeps only the LAST ~224 tokens of the prompt, dropping the start —
 // cap the vocabulary so a large dictionary can't push itself (or the tail) out.
-function buildPrompt(vocabulary, prevTail) {
-  const words = String(vocabulary || '')
-    .split(/[,\n]/)
-    .map((w) => w.trim())
-    .filter(Boolean);
+function buildPrompt(dictionaryOrVocabulary, prevTail) {
+  const words = dictionaryOrVocabulary && typeof dictionaryOrVocabulary === 'object'
+    ? preferredTerms(dictionaryOrVocabulary)
+    : String(dictionaryOrVocabulary || '').split(/[,\n]/).map((word) => word.trim()).filter(Boolean);
   const parts = [];
   if (words.length) {
-    let vocab = words.join(', ');
-    if (vocab.length > 600) vocab = vocab.slice(0, 600).replace(/,[^,]*$/, '');
-    parts.push(vocab + '.');
+    const kept = [];
+    let length = 0;
+    for (const word of words) {
+      const extra = word.length + (kept.length ? 2 : 0);
+      if (length + extra > 600) break;
+      kept.push(word);
+      length += extra;
+    }
+    if (kept.length) parts.push(`Preferred spelling: ${kept.join(', ')}.`);
   }
   if (prevTail) parts.push(String(prevTail).slice(-200));
   return parts.length ? parts.join(' ') : undefined;

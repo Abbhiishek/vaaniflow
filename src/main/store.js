@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { dictionarySettingsPatch, migrateLegacyDictionary } = require('./dictionary');
 
 class JsonFile {
   constructor(filePath, fallback) {
@@ -128,6 +129,8 @@ const SETTINGS_DEFAULTS = {
   launchAtLogin: false,
   timeoutSec: 60,
   fastMode: true,
+  dictionarySchemaVersion: 0,
+  dictionaryEntries: [], // [{ id, from, to, starred, source, createdAt }]
   vocabulary: '',
   replacements: [], // [{ from, to }] applied to transcripts after transcription
   spokenCommands: true, // "new line", "period", "scratch that"
@@ -141,9 +144,9 @@ const SETTINGS_DEFAULTS = {
   styleInstructions: '', // free-text writing style for the polish stage
   windowTransparency: 0, // 0–70% acrylic see-through on the dashboard (0 = solid)
   accentColor: '#e8e9eb', // primary color for buttons, toggles, charts, heatmap
-  autoLearnVocabulary: true, // auto-add frequent proper nouns to the dictionary
-  dictionarySuggestions: {}, // word -> times seen (candidates not yet in vocabulary)
-  dictionaryDismissed: [] // suggestions the user rejected
+  autoLearnVocabulary: true, // auto-import repeated proper nouns/acronyms
+  dictionarySuggestions: {}, // internal candidate counts kept for auto-learning
+  dictionaryDismissed: [] // legacy rejected candidates
 };
 
 const LEGACY_CONFIG_KEYS = [
@@ -178,6 +181,11 @@ class Store {
         migrated = true;
       }
     }
+    const dictionaryMigration = migrateLegacyDictionary(this.settingsFile.data);
+    if (dictionaryMigration.changed) {
+      Object.assign(this.settingsFile.data, dictionaryMigration.patch);
+      migrated = true;
+    }
     if (migrated) this.settingsFile.flush();
   }
 
@@ -186,7 +194,11 @@ class Store {
   }
 
   updateSettings(patch) {
-    Object.assign(this.settingsFile.data, patch);
+    const nextPatch = patch && typeof patch === 'object' ? { ...patch } : {};
+    if (Object.prototype.hasOwnProperty.call(nextPatch, 'dictionaryEntries')) {
+      Object.assign(nextPatch, dictionarySettingsPatch(nextPatch.dictionaryEntries));
+    }
+    Object.assign(this.settingsFile.data, nextPatch);
     this.settingsFile.save();
     return this.settingsFile.data;
   }

@@ -132,36 +132,106 @@
 
       <!-- ============ DICTIONARY ============ -->
       <section id="view-dictionary" class="view">
-        <h1>Dictionary</h1>
-        <p class="subtitle">VaaniFlow learns the words Whisper gets wrong — names, products, jargon — automatically or from you.</p>
-
-        <div class="settings-group">
-          <h2>Suggested words</h2>
-          <p class="group-hint">Unique words spotted in your dictations. Accept to teach them to Whisper, dismiss to never see them again. Words seen 3+ times are added automatically.</p>
-          <label class="toggle"><input id="set-autoLearnVocabulary" type="checkbox" /><span></span>Learn new words automatically</label>
-          <div id="suggestion-list"></div>
-          <p class="group-hint" id="suggestion-empty" hidden>Nothing yet — suggestions appear as you dictate.</p>
-        </div>
-
-        <div class="settings-group">
-          <h2>Vocabulary</h2>
-          <label>Words sent to Whisper as a decoding hint
-            <textarea id="set-vocabulary" rows="4" placeholder="VaaniFlow, Kubernetes, AKS, Wispr Flow…&#10;(comma or newline separated)" spellcheck="false"></textarea>
-          </label>
-        </div>
-
-        <div class="settings-group">
-          <h2>Corrections</h2>
-          <p class="group-hint">Find &amp; replace rules applied to every transcript.</p>
-          <div id="repl-list"></div>
-          <div class="row repl-add">
-            <input id="repl-from" type="text" placeholder="heard as… e.g. whisper flow" spellcheck="false" />
-            <span class="repl-arrow">→</span>
-            <input id="repl-to" type="text" placeholder="replace with… e.g. Wispr Flow" spellcheck="false" />
-            <button id="repl-add-btn" class="primary-btn">Add</button>
+        <div class="dictionary-heading">
+          <div>
+            <h1>Dictionary</h1>
+            <p class="subtitle">Teach VaaniFlow the names, phrases, and shorthand that matter to you.</p>
           </div>
+          <button id="dict-add-btn" class="primary-btn dictionary-add-btn">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+            Add new
+          </button>
+        </div>
+
+        <div class="dictionary-hero">
+          <div class="dictionary-orbit" aria-hidden="true"><span>V</span></div>
+          <div class="dictionary-hero-copy">
+            <span class="dictionary-kicker">Your language, remembered</span>
+            <h2>VaaniFlow spells it the way <em>you</em> do.</h2>
+            <p>Save personal names, company jargon, product terms, acronyms, or expansions such as <strong>BTW&nbsp;→&nbsp;by the way</strong>. Your dictionary guides both transcription and AI polishing.</p>
+            <div class="dictionary-examples" aria-label="Examples">
+              <button type="button" class="dict-example" data-from="Abhishek" data-to="Abhishek">Abhishek</button>
+              <button type="button" class="dict-example" data-from="Vaani Flow" data-to="VaaniFlow">Vaani Flow → VaaniFlow</button>
+              <button type="button" class="dict-example" data-from="BTW" data-to="by the way">BTW → by the way</button>
+            </div>
+          </div>
+          <label class="toggle dictionary-auto-learn"><input id="set-autoLearnVocabulary" type="checkbox" /><span></span><span class="toggle-copy"><strong>Learn automatically</strong><small>Import repeated names and acronyms</small></span></label>
+        </div>
+
+        <div class="dictionary-toolbar">
+          <label class="dictionary-search">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="m20.7 19.3-4.2-4.2a7 7 0 1 0-1.4 1.4l4.2 4.2 1.4-1.4zM5 11a6 6 0 1 1 12 0 6 6 0 0 1-12 0z"/></svg>
+            <input id="dict-search" type="search" placeholder="Search your dictionary" autocomplete="off" />
+          </label>
+          <span id="dict-count" class="dictionary-count">0 entries</span>
+          <select id="dict-sort" class="dictionary-sort" aria-label="Sort dictionary">
+            <option value="priority">Starred first</option>
+            <option value="recent">Newest first</option>
+            <option value="alpha">A–Z</option>
+          </select>
+        </div>
+
+        <div id="dict-list" class="dictionary-list"></div>
+        <div id="dict-empty" class="dictionary-empty" hidden>
+          <div class="dictionary-empty-mark">Aa</div>
+          <h2 id="dict-empty-title">Your words will live here</h2>
+          <p id="dict-empty-copy">Add a name, phrase, or replacement and VaaniFlow will use it on your next dictation.</p>
+          <button id="dict-empty-add" class="secondary-btn">Add your first entry</button>
         </div>
       </section>
+
+      <div id="dict-editor-backdrop" class="modal-backdrop" hidden>
+        <form id="dict-editor" class="modal-card dictionary-modal" role="dialog" aria-modal="true" aria-labelledby="dict-editor-title">
+          <div class="modal-header">
+            <div>
+              <span class="modal-kicker">Personal dictionary</span>
+              <h2 id="dict-editor-title">Add an entry</h2>
+            </div>
+            <button id="dict-editor-close" class="modal-close" type="button" aria-label="Close">×</button>
+          </div>
+          <p class="modal-copy">Use one exact spelling, or tell VaaniFlow what a phrase should become.</p>
+          <div class="dictionary-field-grid">
+            <label class="dictionary-field">
+              <span>Heard as <small>optional</small></span>
+              <input id="dict-from" type="text" maxlength="120" placeholder="whisper flow" spellcheck="false" />
+              <small>Leave blank when the spelling is already correct.</small>
+            </label>
+            <span class="dictionary-field-arrow" aria-hidden="true">→</span>
+            <label class="dictionary-field">
+              <span>Write as</span>
+              <input id="dict-to" type="text" maxlength="180" placeholder="Wispr Flow" spellcheck="false" required />
+              <small>The exact text VaaniFlow should produce.</small>
+            </label>
+          </div>
+          <label class="dictionary-star-option">
+            <input id="dict-starred" type="checkbox" />
+            <span class="dictionary-star-box">★</span>
+            <span><strong>Prioritize this entry</strong><small>Starred terms are placed first in transcription and polishing hints.</small></span>
+          </label>
+          <p id="dict-editor-error" class="form-error" hidden></p>
+          <div class="modal-actions">
+            <button id="dict-editor-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button class="primary-btn" type="submit">Save entry</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="dict-delete-backdrop" class="modal-backdrop" hidden>
+        <div class="modal-card confirm-modal" role="dialog" aria-modal="true" aria-labelledby="dict-delete-title">
+          <div class="modal-header">
+            <div>
+              <span class="modal-kicker">Personal dictionary</span>
+              <h2 id="dict-delete-title">Delete this entry?</h2>
+            </div>
+            <button id="dict-delete-close" class="modal-close" type="button" aria-label="Close">×</button>
+          </div>
+          <p id="dict-delete-copy" class="modal-copy">This entry will be removed permanently.</p>
+          <div class="modal-actions">
+            <button id="dict-delete-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button id="dict-delete-confirm" class="danger-solid-btn" type="button">Yes, delete it</button>
+          </div>
+        </div>
+      </div>
 
       <!-- ============ STYLE ============ -->
       <section id="view-style" class="view">

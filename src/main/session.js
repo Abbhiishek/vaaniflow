@@ -19,6 +19,7 @@ const { EventEmitter } = require('events');
 const { transcribe, warmup } = require('./transcriber');
 const { polishText, polishWarmup } = require('./polisher');
 const { pickTone } = require('./tones');
+const { replacementRules } = require('./dictionary');
 const {
   cleanArtifacts,
   applyReplacements,
@@ -215,7 +216,7 @@ class Session extends EventEmitter {
     this.chunkChain = this.chunkChain.then(async () => {
       if (gen !== this.gen) return;
       try {
-        const prompt = buildPrompt(settings.vocabulary, this.prevTail);
+        const prompt = buildPrompt(settings, this.prevTail);
         const raw = await transcribe(wavBuffer, settings, { prompt });
         if (gen !== this.gen) return;
         const text = cleanArtifacts(raw);
@@ -293,7 +294,7 @@ class Session extends EventEmitter {
         text = result.text;
         polished = result.polished;
       }
-      text = applyReplacements(text, settings.replacements);
+      text = applyReplacements(text, replacementRules(settings));
     }
 
     if (!text) {

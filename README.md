@@ -53,8 +53,9 @@ toggle in Settings → Behavior).
 - **Home** — your past dictations: searchable, day-grouped, copy/delete
 - **Insights** — words dictated, dictations, avg words/min, day streak, a GitHub-style
   activity heatmap, 14-day trend, and desktop usage (which apps you dictate into)
-- **Dictionary** — VaaniFlow learns your unique words automatically (proper nouns,
-  acronyms, camelCase seen 3+ times) or manually; plus correction rules
+- **Dictionary** — one personal language list for exact spellings and replacements;
+  add, edit, delete, search, or star names, jargon, acronyms, and expansions. Repeated
+  proper nouns and acronyms can also be imported automatically.
 - **Style** — default tone, free-form style instructions for the AI polish stage,
   and per-app tone profiles
 - **Snippets** — spoken trigger phrases that insert saved text
@@ -98,10 +99,10 @@ Ctrl+V, and tone profiles pick the right register for the polish stage.
 
 ## Accuracy & speed
 
-- **Custom vocabulary** (Settings → Dictionary) — names and jargon are sent to Whisper as
-  a decoding hint (`prompt`), so "VaaniFlow" stops coming back as "vani flow".
-- **Corrections** — find→replace rules applied to every transcript for words the model
-  consistently gets wrong.
+- **Personal dictionary** — exact spellings are sent to Whisper as a decoding hint and
+  supplied to the AI polish stage. Mappings such as `vani flow` → `VaaniFlow` or
+  `BTW` → `by the way` are also enforced after polishing, so they still work when AI
+  polish is disabled or unavailable. Starred entries receive priority in both prompts.
 - **Artifact cleanup** — whisper.cpp noise markers (`[BLANK_AUDIO]`, `(laughs)`, `♪…♪`)
   and classic silence hallucinations ("thanks for watching", "subtitles by …") are
   stripped automatically.
