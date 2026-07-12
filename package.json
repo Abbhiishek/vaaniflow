@@ -1,7 +1,7 @@
 {
   "name": "vaaniflow",
   "productName": "Vaani",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Voice dictation for Windows powered by Azure OpenAI Whisper and an optional Azure chat deployment.",
   "main": "src/main/main.js",
   "author": "Abhishek Kushwaha",

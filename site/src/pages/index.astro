@@ -1,0 +1,178 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const githubUrl = 'https://github.com/Abbhiishek/vaaniflow';
+const downloadUrl = '/api/download/windows';
+---
+
+<BaseLayout
+  title="VaaniFlow — Open-source voice dictation for Windows"
+  description="Speak naturally and turn your voice into polished text across Windows with VaaniFlow. Free, local-first, and open source."
+>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="#top" aria-label="VaaniFlow home">
+        <img src="/app-icon.png" width="36" height="36" alt="" />
+        <span>VaaniFlow</span>
+      </a>
+
+      <nav aria-label="Main navigation">
+        <a href="#how-it-works">How it works</a>
+        <a href="#open-source">Open source</a>
+        <a class="nav-github" href={githubUrl} target="_blank" rel="noreferrer">
+          GitHub
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="15" height="15">
+            <path d="M4.25 3.75h8v8m0-8-8.5 8.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4"></path>
+          </svg>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero shell" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Open source · Built for Windows</p>
+        <h1>Your voice,<br /><em>wherever</em> you type.</h1>
+        <p class="hero-description">
+          VaaniFlow turns natural speech into polished text in any Windows application. Hold a shortcut, speak, and keep moving.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button button-primary" href={downloadUrl} data-download>
+            <svg class="windows-icon" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+              <path fill="currentColor" d="M3 5.1 10.4 4v7.1H3V5.1Zm8.2-1.2L21 2.5v8.6h-9.8V3.9ZM3 12h7.4v7.1L3 18V12Zm8.2 0H21v8.6l-9.8-1.4V12Z"></path>
+            </svg>
+            Download for Windows
+          </a>
+          <a class="button button-secondary" href={githubUrl} target="_blank" rel="noreferrer">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19">
+              <path fill="currentColor" d="M12 .8a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.2.8-.5v-2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.8 5.4-5.5 5.7.4.4.8 1.1.8 2.2v3.1c0 .3.2.6.8.5A11.5 11.5 0 0 0 12 .8Z"></path>
+            </svg>
+            View source
+          </a>
+        </div>
+        <p class="hero-note">Windows 10/11 · MIT licensed · Requires your own Azure OpenAI deployment</p>
+      </div>
+
+      <div class="product-card" aria-label="A preview of VaaniFlow turning speech into polished text">
+        <div class="product-bar">
+          <div class="product-name">
+            <img src="/app-icon.png" width="28" height="28" alt="" />
+            <div><strong>Vaani</strong><span>Voice input</span></div>
+          </div>
+          <span class="listening-state"><i></i> Listening</span>
+        </div>
+
+        <div class="transcript">
+          <div class="waveform" aria-hidden="true">
+            <span style="--height: 18%; --peak: 1.8; --delay: -0.72s; --speed: 1.18s"></span><span style="--height: 42%; --peak: 1.35; --delay: -0.18s; --speed: 0.94s"></span><span style="--height: 72%; --peak: 1.18; --delay: -0.61s; --speed: 1.07s"></span><span style="--height: 48%; --peak: 1.5; --delay: -0.32s; --speed: 0.88s"></span><span style="--height: 88%; --peak: 1.08; --delay: -0.84s; --speed: 1.13s"></span><span style="--height: 58%; --peak: 1.38; --delay: -0.41s; --speed: 0.91s"></span><span style="--height: 34%; --peak: 1.6; --delay: -0.09s; --speed: 1.04s"></span><span style="--height: 68%; --peak: 1.24; --delay: -0.55s; --speed: 0.86s"></span><span style="--height: 92%; --peak: 1.06; --delay: -0.26s; --speed: 1.16s"></span><span style="--height: 52%; --peak: 1.42; --delay: -0.77s; --speed: 0.97s"></span><span style="--height: 28%; --peak: 1.7; --delay: -0.48s; --speed: 1.09s"></span><span style="--height: 62%; --peak: 1.3; --delay: -0.14s; --speed: 0.89s"></span><span style="--height: 38%; --peak: 1.55; --delay: -0.69s; --speed: 1.12s"></span><span style="--height: 76%; --peak: 1.16; --delay: -0.37s; --speed: 0.93s"></span><span style="--height: 46%; --peak: 1.48; --delay: -0.81s; --speed: 1.02s"></span><span style="--height: 20%; --peak: 1.78; --delay: -0.22s; --speed: 0.87s"></span>
+          </div>
+          <p>“Could you move our call to Thursday afternoon?”</p>
+        </div>
+
+        <div class="result-card">
+          <span>Polished text</span>
+          <p>Could we move our call to Thursday afternoon?</p>
+          <div class="result-meta">
+            <span>Ready to paste</span>
+            <kbd>Ctrl</kbd><kbd>V</kbd>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust-row" aria-label="Product qualities">
+      <div class="shell trust-grid">
+        <div><strong>System-wide</strong><span>Works across your Windows apps</span></div>
+        <div><strong>Local-first</strong><span>Your history stays on your device</span></div>
+        <div><strong>Open source</strong><span>Inspect, change, and contribute</span></div>
+        <div><strong>Your provider</strong><span>Connect your own Azure deployment</span></div>
+      </div>
+    </section>
+
+    <section class="section shell" id="how-it-works">
+      <div class="section-heading">
+        <p class="eyebrow"><span></span> The whole workflow</p>
+        <h2>From thought to text<br />in three steps.</h2>
+      </div>
+
+      <ol class="steps">
+        <li>
+          <span class="step-number">01</span>
+          <div>
+            <h3>Hold your shortcut</h3>
+            <p>Start speaking from any app without switching windows or opening another workspace.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">02</span>
+          <div>
+            <h3>Speak naturally</h3>
+            <p>VaaniFlow transcribes your voice and can clean up phrasing to match how you want to write.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">03</span>
+          <div>
+            <h3>Keep working</h3>
+            <p>The result is inserted at your cursor, ready in messages, documents, email, or code.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="section shell open-source" id="open-source">
+      <div class="source-copy">
+        <p class="eyebrow"><span></span> Open by default</p>
+        <h2>Useful software should earn your trust.</h2>
+        <p>
+          VaaniFlow is MIT licensed and developed in public. Read the code, understand how your data is handled, suggest an improvement, or shape the next release.
+        </p>
+        <a class="text-link" href={githubUrl} target="_blank" rel="noreferrer">
+          Explore the GitHub repository
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+            <path d="M3.5 8h9m-3.5-3.5L12.5 8 9 11.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4"></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class="source-list">
+        <div><span>01</span><p>No VaaniFlow account required</p></div>
+        <div><span>02</span><p>Settings and history stored locally</p></div>
+        <div><span>03</span><p>Bring your own Azure OpenAI resource</p></div>
+        <div><span>04</span><p>Community contributions welcome</p></div>
+      </div>
+    </section>
+
+    <section class="download-section shell">
+      <div>
+        <p class="eyebrow"><span></span> Start dictating</p>
+        <h2>Less typing.<br /><em>More flow.</em></h2>
+      </div>
+      <div class="download-action">
+        <p>Download the newest Windows installer directly from the latest GitHub release.</p>
+        <a class="button button-primary" href={downloadUrl} data-download>
+          <svg class="windows-icon" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M3 5.1 10.4 4v7.1H3V5.1Zm8.2-1.2L21 2.5v8.6h-9.8V3.9ZM3 12h7.4v7.1L3 18V12Zm8.2 0H21v8.6l-9.8-1.4V12Z"></path>
+          </svg>
+          Download latest release
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-inner">
+      <a class="brand" href="#top" aria-label="Back to top">
+        <img src="/app-icon.png" width="30" height="30" alt="" />
+        <span>VaaniFlow</span>
+      </a>
+      <p>Open-source voice dictation for Windows.</p>
+      <div>
+        <a href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>
+        <a href={`${githubUrl}/blob/main/README.md`} target="_blank" rel="noreferrer">Documentation</a>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>

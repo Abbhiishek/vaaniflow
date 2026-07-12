@@ -78,6 +78,18 @@ npm run dist   # build the Windows installer
 
 VaaniFlow uses plain Electron without a frontend framework. The main process handles recording sessions, transcription, polishing, persistence, global shortcuts, and text injection; the renderer provides the recording overlay and dashboard.
 
+### Marketing website
+
+The Astro website lives in `site/` and deploys independently from the desktop application. For local development:
+
+```bash
+cd site
+npm install
+npm run dev
+```
+
+For Vercel, import this repository and set the project root directory to `site`. The `/api/download/windows` endpoint resolves the installer from the latest published GitHub release and redirects the browser to GitHub. A `GITHUB_TOKEN` environment variable is optional and only needed to raise GitHub API rate limits.
+
 ## Contributing
 
 Bug reports, feature proposals, documentation improvements, and pull requests are welcome. Please open an issue before starting a large change so the approach can be discussed early.

@@ -45,10 +45,11 @@ jobs:
         run: |
           $v = (Get-Content package.json | ConvertFrom-Json).version
           $tag = "v$v"
+          Copy-Item "dist/Vaani-Setup-$v.exe" "dist/Vaani-Setup.exe"
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) {
             # Keep a new release invisible to auto-updaters until every asset is present.
             gh release create $tag --title "Vaani $v" --generate-notes --draft
           }
-          gh release upload $tag "dist/Vaani-Setup-$v.exe" "dist/Vaani-Setup-$v.exe.blockmap" "dist/latest.yml" --clobber
+          gh release upload $tag "dist/Vaani-Setup-$v.exe" "dist/Vaani-Setup.exe" "dist/Vaani-Setup-$v.exe.blockmap" "dist/latest.yml" --clobber
           gh release edit $tag --title "Vaani $v" --draft=false --latest
