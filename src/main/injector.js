@@ -186,7 +186,7 @@ class Injector {
     return this._send('ping', 15000);
   }
 
-  // { app: 'Code', title: 'main.js — vaaniflow' } for the focused window, or null
+  // { app: 'Code', title: 'main.js — vaani' } for the focused window, or null
   async foreground() {
     const r = await this._send('fg', 3000);
     if (!r.ok || !r.payload) return null;

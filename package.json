@@ -1,6 +1,6 @@
 {
   "name": "vaaniflow",
-  "productName": "VaaniFlow",
+  "productName": "Vaani",
   "version": "1.0.1",
   "description": "Voice dictation for Windows powered by Azure OpenAI Whisper and an optional Azure chat deployment.",
   "main": "src/main/main.js",
@@ -18,8 +18,8 @@
     "dist": "npm run icons && electron-builder --win"
   },
   "build": {
-    "appId": "com.vaani.flow",
-    "productName": "VaaniFlow",
+    "appId": "com.vaani.app",
+    "productName": "Vaani",
     "files": [
       "src/**/*",
       "assets/**/*",
@@ -36,9 +36,10 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.png"
+      "icon": "assets/vaani.png"
     },
     "nsis": {
+      "guid": "8429a095-bee6-5aa8-8eb3-4fefd8b092a1",
       "oneClick": true,
       "runAfterFinish": true
     }

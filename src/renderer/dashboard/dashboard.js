@@ -494,7 +494,7 @@ function renderDictionary() {
     $('#dict-empty-title').textContent = searching ? 'No matching entries' : 'Your words will live here';
     $('#dict-empty-copy').textContent = searching
       ? 'Try another spelling or clear the search.'
-      : 'Add a name, phrase, or replacement and VaaniFlow will use it on your next dictation.';
+      : 'Add a name, phrase, or replacement and Vaani will use it on your next dictation.';
     $('#dict-empty-add').textContent = searching ? 'Clear search' : 'Add your first entry';
     return;
   }
@@ -600,7 +600,7 @@ $('#dict-editor').addEventListener('submit', async (event) => {
   event.preventDefault();
   const to = $('#dict-to').value.replace(/\s+/g, ' ').trim();
   const from = $('#dict-from').value.replace(/\s+/g, ' ').trim() || to;
-  if (!to) return showDictionaryError('Enter how VaaniFlow should write this term.');
+  if (!to) return showDictionaryError('Enter how Vaani should write this term.');
   const duplicate = dictionaryEntries.find((entry) => entry.id !== editingDictionaryId
     && entry.from.toLocaleLowerCase() === from.toLocaleLowerCase());
   if (duplicate) return showDictionaryError(`“${from}” is already in your dictionary.`);
@@ -801,7 +801,7 @@ $('#btn-test').addEventListener('click', async () => {
 // ---------------- updates ----------------
 
 function showUpdateBanner(version) {
-  $('#update-text').textContent = `VaaniFlow ${version} is ready`;
+  $('#update-text').textContent = `Vaani ${version} is ready`;
   $('#update-banner').hidden = false;
 }
 

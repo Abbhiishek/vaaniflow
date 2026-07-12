@@ -1,6 +1,6 @@
 // Personal dictionary shared by transcription, AI polishing, and the dashboard.
 // Each entry says what speech-to-text may produce (`from`) and the exact text
-// VaaniFlow should write (`to`). A name can map to itself to preserve its casing.
+// Vaani should write (`to`). A name can map to itself to preserve its casing.
 'use strict';
 
 const crypto = require('crypto');
@@ -83,7 +83,7 @@ function entriesFromSettings(settings) {
   const entries = normalizeEntries(source.dictionaryEntries);
   if (entries.length) return entries;
 
-  // Runtime fallback for settings created by older VaaniFlow versions.
+  // Runtime fallback for settings created by older Vaani versions.
   for (const term of String(source.vocabulary || '').split(/[,\n]/)) {
     const value = cleanValue(term, MAX_FROM_LENGTH);
     if (value) upsertEntry(entries, { from: value, to: value, source: 'imported' }, 'imported');

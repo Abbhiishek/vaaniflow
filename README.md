@@ -1,4 +1,4 @@
-# VaaniFlow
+# Vaani
 
 Wispr Flow–style voice dictation for Windows, powered by Azure OpenAI Whisper and an
 optional Azure OpenAI chat deployment for transcript cleanup.
@@ -13,7 +13,8 @@ npm install
 npm start
 ```
 
-On first launch VaaniFlow creates `%APPDATA%/vaaniflow/config.json`. Open it from the
+On first launch Vaani creates `%APPDATA%/vaani/config.json`. When upgrading from an older
+version, existing data is copied automatically from `%APPDATA%/vaaniflow`. Open it from the
 Settings page and enter your Azure deployment details:
 
 ```json
@@ -26,7 +27,7 @@ Settings page and enter your Azure deployment details:
 }
 ```
 
-`llmDeployment` is optional. VaaniFlow reloads this file before every dictation, so
+`llmDeployment` is optional. Vaani reloads this file before every dictation, so
 changes take effect without rebuilding or restarting the app. The connection test sends
 a short silent WAV to verify the endpoint, key, API version, and Whisper deployment.
 
@@ -45,7 +46,7 @@ timer. When transcription finishes, the text is pasted at your cursor and saved 
 History in the dashboard.
 
 **Note on ending with Space:** the space keypress also lands in the focused app; by
-default VaaniFlow sends one Backspace before pasting to remove it ("Remove the space…"
+default Vaani sends one Backspace before pasting to remove it ("Remove the space…"
 toggle in Settings → Behavior).
 
 ## Dashboard
@@ -63,9 +64,9 @@ toggle in Settings → Behavior).
 
 ## Local-first
 
-VaaniFlow is a local-first app: there is no account, no sign-in, and no cloud backend.
+Vaani is a local-first app: there is no account, no sign-in, and no cloud backend.
 Transcripts, settings, dictionary, snippets, and Azure configuration live as JSON in
-`%APPDATA%/vaaniflow`. The API key is stored as plain text in the user-editable
+`%APPDATA%/vaani`. The API key is stored as plain text in the user-editable
 `config.json`, so do not share that file. The only network calls are to the Azure OpenAI
 resource configured there.
 
@@ -100,7 +101,7 @@ Ctrl+V, and tone profiles pick the right register for the polish stage.
 ## Accuracy & speed
 
 - **Personal dictionary** — exact spellings are sent to Whisper as a decoding hint and
-  supplied to the AI polish stage. Mappings such as `vani flow` → `VaaniFlow` or
+  supplied to the AI polish stage. Mappings such as `vani` → `Vaani` or
   `BTW` → `by the way` are also enforced after polishing, so they still work when AI
   polish is disabled or unavailable. Starred entries receive priority in both prompts.
 - **Artifact cleanup** — whisper.cpp noise markers (`[BLANK_AUDIO]`, `(laughs)`, `♪…♪`)
@@ -115,7 +116,7 @@ Ctrl+V, and tone profiles pick the right register for the polish stage.
   microphones.
 - **Resilient** — transient server errors (network blips, timeouts, 5xx) are retried
   once; if a dictation still fails, its audio is saved to
-  `%APPDATA%/vaaniflow/failed-audio/` so your words are never lost.
+  `%APPDATA%/vaani/failed-audio/` so your words are never lost.
 - Silence is trimmed before upload and the server connection (transcription *and*
   polish) is warmed up the moment recording starts. Each history entry records
   per-stage latency (transcribe / polish / paste) so you can see where time goes.
@@ -133,7 +134,7 @@ src/
     transcriber.js  Azure OpenAI Whisper transcription client
     injector.js     clipboard + Ctrl+V via persistent PowerShell SendInput helper
     windows.js      overlay + dashboard window factories
-    store.js        JSON persistence (config + settings + history) in %APPDATA%/vaaniflow
+    store.js        JSON persistence (config + settings + history) in %APPDATA%/vaani
   preload/preload.js
   renderer/
     overlay/        always-on-top waveform pill (mic capture, 16 kHz WAV encoding)

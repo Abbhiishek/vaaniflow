@@ -1,4 +1,5 @@
 'use strict';
+const fs = require('fs');
 const path = require('path');
 const { app, BrowserWindow, ipcMain, clipboard, shell } = require('electron');
 const { Store } = require('./store');
@@ -12,7 +13,29 @@ const { Updater } = require('./updater');
 const dictionary = require('./dictionary');
 
 const IS_SMOKE = process.argv.includes('--smoke');
-const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
+const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'vaani.png');
+const APP_USER_MODEL_ID = 'com.vaani.app';
+
+function migrateLegacyUserData(userDataDir) {
+  const appDataDir = app.getPath('appData');
+  const legacyDirs = ['vaaniflow', 'VaaniFlow'].map((name) => path.join(appDataDir, name));
+  const files = ['config.json', 'settings.json', 'history.json'];
+
+  fs.mkdirSync(userDataDir, { recursive: true });
+  for (const legacyDir of legacyDirs) {
+    if (path.resolve(legacyDir) === path.resolve(userDataDir) || !fs.existsSync(legacyDir)) continue;
+    for (const file of files) {
+      const source = path.join(legacyDir, file);
+      const destination = path.join(userDataDir, file);
+      if (fs.existsSync(source) && !fs.existsSync(destination)) fs.copyFileSync(source, destination);
+    }
+    const failedAudioSource = path.join(legacyDir, 'failed-audio');
+    const failedAudioDestination = path.join(userDataDir, 'failed-audio');
+    if (fs.existsSync(failedAudioSource) && !fs.existsSync(failedAudioDestination)) {
+      fs.cpSync(failedAudioSource, failedAudioDestination, { recursive: true });
+    }
+  }
+}
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -46,9 +69,11 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', openDashboard);
 
   app.whenReady().then(async () => {
-    app.setAppUserModelId('com.vaani.flow');
+    app.setAppUserModelId(APP_USER_MODEL_ID);
 
-    store = new Store(app.getPath('userData'));
+    const userDataDir = app.getPath('userData');
+    migrateLegacyUserData(userDataDir);
+    store = new Store(userDataDir);
     injector = new Injector();
     injector.start();
 

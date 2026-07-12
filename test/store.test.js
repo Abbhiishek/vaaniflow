@@ -62,7 +62,7 @@ test('surfaces invalid config JSON without preventing Store construction', (t) =
 test('migrates the legacy vocabulary and corrections into dictionary entries', (t) => {
   const dir = tempUserData(t);
   fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({
-    vocabulary: 'Abhishek, VaaniFlow',
+    vocabulary: 'Abhishek, Vaani',
     replacements: [{ from: 'BTW', to: 'by the way' }]
   }));
 
@@ -72,7 +72,7 @@ test('migrates the legacy vocabulary and corrections into dictionary entries', (
     store.settings.dictionaryEntries.map(({ from, to }) => ({ from, to })),
     [
       { from: 'Abhishek', to: 'Abhishek' },
-      { from: 'VaaniFlow', to: 'VaaniFlow' },
+      { from: 'Vaani', to: 'Vaani' },
       { from: 'BTW', to: 'by the way' }
     ]
   );

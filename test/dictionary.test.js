@@ -14,7 +14,7 @@ const { dictionaryInstruction } = require('../src/main/polisher');
 test('migrates vocabulary and corrections into unified dictionary entries', () => {
   const { changed, patch } = migrateLegacyDictionary({
     dictionarySchemaVersion: 0,
-    vocabulary: 'Abhishek, VaaniFlow, whisper flow',
+    vocabulary: 'Abhishek, Vaani, whisper flow',
     replacements: [
       { from: 'whisper flow', to: 'Wispr Flow' },
       { from: 'BTW', to: 'by the way' }
@@ -27,7 +27,7 @@ test('migrates vocabulary and corrections into unified dictionary entries', () =
     patch.dictionaryEntries.map(({ from, to }) => ({ from, to })),
     [
       { from: 'Abhishek', to: 'Abhishek' },
-      { from: 'VaaniFlow', to: 'VaaniFlow' },
+      { from: 'Vaani', to: 'Vaani' },
       { from: 'whisper flow', to: 'Wispr Flow' },
       { from: 'BTW', to: 'by the way' }
     ]
@@ -36,15 +36,15 @@ test('migrates vocabulary and corrections into unified dictionary entries', () =
 
 test('stars prioritize spelling hints without changing deterministic rules', () => {
   const settings = dictionarySettingsPatch([
-    { from: 'Vaani Flow', to: 'VaaniFlow' },
+    { from: 'vani', to: 'Vaani' },
     { from: 'abhishek', to: 'Abhishek', starred: true },
     { from: 'BTW', to: 'by the way' }
   ]);
 
-  assert.deepEqual(preferredTerms(settings).slice(0, 3), ['Abhishek', 'VaaniFlow', 'by the way']);
-  assert.match(buildPrompt(settings, ''), /^Preferred spelling: Abhishek, VaaniFlow, by the way\./);
+  assert.deepEqual(preferredTerms(settings).slice(0, 3), ['Abhishek', 'Vaani', 'by the way']);
+  assert.match(buildPrompt(settings, ''), /^Preferred spelling: Abhishek, Vaani, by the way\./);
   assert.deepEqual(replacementRules(settings).map(({ from, to }) => ({ from, to })), [
-    { from: 'Vaani Flow', to: 'VaaniFlow' },
+    { from: 'vani', to: 'Vaani' },
     { from: 'abhishek', to: 'Abhishek' },
     { from: 'BTW', to: 'by the way' }
   ]);
