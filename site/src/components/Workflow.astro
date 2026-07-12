@@ -1,0 +1,130 @@
+---
+import SectionHeading from './SectionHeading.astro';
+import { workflowSteps } from '../data/home';
+---
+
+<section class="workflow shell" id="workflow" aria-labelledby="workflow-title">
+  <SectionHeading
+    id="workflow-title"
+    label="The default interaction"
+    title="Hold. Speak. Release."
+    description="The sequence is intentionally short: stay in the application you are using and let the shortcut carry the text back to the cursor."
+  />
+
+  <ol class="workflow__steps">
+    {workflowSteps.map((step) => (
+      <li>
+        <div class="workflow__number">
+          <span>{step.number}</span>
+          <b>{step.action}</b>
+        </div>
+        <div>
+          <h3>{step.title}</h3>
+          <p>{step.description}</p>
+        </div>
+        <svg aria-hidden="true" viewBox="0 0 40 40" width="40" height="40">
+          <path d="M8 20h24m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+        </svg>
+      </li>
+    ))}
+  </ol>
+
+  <p class="workflow__aside">
+    Prefer not to hold a shortcut? A quick tap starts hands-free recording; use the shortcut again when you are finished.
+  </p>
+</section>
+
+<style>
+  .workflow {
+    padding-block: var(--space-10);
+  }
+
+  .workflow__steps {
+    display: grid;
+    margin: var(--space-8) 0 0;
+    padding: 0;
+    border-top: 1px solid var(--color-ink);
+    list-style: none;
+  }
+
+  .workflow__steps li {
+    display: grid;
+    grid-template-columns: minmax(190px, 0.7fr) minmax(0, 1.55fr) auto;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-5) 0;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .workflow__number {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .workflow__number span {
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+  }
+
+  .workflow__number b {
+    font-family: var(--font-display);
+    font-size: clamp(1.7rem, 3vw, 2.8rem);
+    font-variation-settings: 'wdth' 86;
+    font-weight: 630;
+    letter-spacing: -0.05em;
+  }
+
+  h3 {
+    margin-bottom: 0.35rem;
+    font-size: 1.1rem;
+    font-variation-settings: 'wdth' 94;
+    font-weight: 630;
+    letter-spacing: -0.025em;
+  }
+
+  li p {
+    max-width: 620px;
+    margin: 0;
+    color: var(--color-steel);
+    font-size: 0.88rem;
+  }
+
+  li svg {
+    color: var(--color-steel);
+  }
+
+  .workflow__aside {
+    max-width: 670px;
+    margin: var(--space-5) 0 0 auto;
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--color-ink);
+    color: var(--color-steel);
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 719px) {
+    .workflow__steps {
+      margin-top: var(--space-7);
+    }
+
+    .workflow__steps li {
+      grid-template-columns: 1fr auto;
+      gap: var(--space-3);
+      padding-block: var(--space-4);
+    }
+
+    .workflow__number {
+      grid-column: 1 / -1;
+    }
+
+    .workflow__steps li > div:nth-child(2) {
+      grid-column: 1;
+    }
+
+    li svg {
+      grid-column: 2;
+    }
+  }
+</style>

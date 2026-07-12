@@ -1,0 +1,73 @@
+---
+interface Props {
+  id?: string;
+  label: string;
+  title: string;
+  description?: string;
+  inverse?: boolean;
+}
+
+const { id, label, title, description, inverse = false } = Astro.props;
+---
+
+<header class:list={['section-heading', { 'section-heading--inverse': inverse }]}>
+  <p class="mono-label">{label}</p>
+  <div>
+    <h2 id={id}>{title}</h2>
+    {description && <p class="section-heading__description">{description}</p>}
+  </div>
+</header>
+
+<style>
+  .section-heading {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.55fr);
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  .mono-label {
+    margin-top: 0.68rem;
+  }
+
+  h2 {
+    max-width: 960px;
+    margin-bottom: 0;
+    font-size: var(--text-h2);
+    font-weight: 610;
+    letter-spacing: -0.065em;
+    line-height: 0.95;
+  }
+
+  .section-heading__description {
+    max-width: 710px;
+    margin: var(--space-5) 0 0;
+    color: var(--color-steel);
+    font-size: var(--text-lead);
+    line-height: 1.58;
+  }
+
+  .section-heading--inverse {
+    color: var(--color-ink);
+  }
+
+  .section-heading--inverse .mono-label,
+  .section-heading--inverse .section-heading__description {
+    color: #9aa3aa;
+  }
+
+  @media (max-width: 719px) {
+    .section-heading {
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+    }
+
+    .mono-label {
+      margin-top: 0;
+    }
+
+    h2 {
+      letter-spacing: -0.05em;
+    }
+  }
+</style>

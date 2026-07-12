@@ -1,0 +1,84 @@
+---
+import Brand from './Brand.astro';
+import { siteConfig } from '../config';
+---
+
+<footer class="site-footer">
+  <div class="shell site-footer__top">
+    <a href="#top"><Brand descriptor compact /></a>
+    <p>Open-source system-wide voice dictation for Windows.</p>
+    <nav aria-label="Footer navigation">
+      <a href={siteConfig.githubUrl} target="_blank" rel="noreferrer">GitHub</a>
+      <a href={siteConfig.releasesUrl} target="_blank" rel="noreferrer">Releases</a>
+      <a href={siteConfig.docsUrl} target="_blank" rel="noreferrer">Documentation</a>
+    </nav>
+  </div>
+  <div class="shell site-footer__bottom">
+    <span>Vaani is the desktop app. VaaniFlow is the project behind it.</span>
+    <span>MIT licensed · Windows 10/11</span>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-rule);
+  }
+
+  .site-footer__top,
+  .site-footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+  }
+
+  .site-footer__top {
+    min-height: 124px;
+  }
+
+  .site-footer__top > p {
+    margin: 0;
+    color: var(--color-steel);
+    font-size: 0.76rem;
+  }
+
+  nav {
+    display: flex;
+    gap: var(--space-4);
+    color: var(--color-steel);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  nav a:hover {
+    color: var(--color-ink);
+  }
+
+  .site-footer__bottom {
+    min-height: 72px;
+    border-top: 1px solid var(--color-soft-rule);
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+  }
+
+  @media (max-width: 719px) {
+    .site-footer__top,
+    .site-footer__bottom {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .site-footer__top {
+      padding-block: var(--space-5);
+    }
+
+    nav {
+      flex-wrap: wrap;
+    }
+
+    .site-footer__bottom {
+      padding-block: var(--space-4);
+    }
+  }
+</style>

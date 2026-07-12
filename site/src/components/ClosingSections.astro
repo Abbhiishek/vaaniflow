@@ -1,0 +1,227 @@
+---
+import ButtonLink from './ButtonLink.astro';
+import SectionHeading from './SectionHeading.astro';
+import { requirements } from '../data/home';
+import { siteConfig } from '../config';
+---
+
+<section class="setup shell" id="setup" aria-labelledby="setup-title">
+  <SectionHeading
+    id="setup-title"
+    label="Before you install"
+    title="Bring the speech provider. Vaani handles the desktop workflow."
+    description="Provider details are entered in Settings → Provider and saved locally. You can use dictation with Whisper alone; cleanup and writing styles are optional."
+  />
+
+  <div class="requirements">
+    {requirements.map((item, index) => (
+      <article>
+        <span>{String(index + 1).padStart(2, '0')}</span>
+        <div><small>{item.label}</small><strong>{item.value}</strong></div>
+      </article>
+    ))}
+  </div>
+
+  <div class="setup__actions">
+    <p>Vaani is MIT licensed and has no VaaniFlow subscription. Usage charges from your configured Azure resource may apply.</p>
+    <div>
+      <ButtonLink href={siteConfig.downloadUrl} variant="primary" downloadAction>Download latest release</ButtonLink>
+      <ButtonLink href={siteConfig.docsUrl} variant="secondary" external>Read setup instructions</ButtonLink>
+    </div>
+  </div>
+</section>
+
+<section class="open-source" id="open-source" aria-labelledby="source-title">
+  <div class="shell open-source__grid">
+    <div>
+      <p class="mono-label">Built in public</p>
+      <h2 id="source-title">Inspect the path from microphone to cursor.</h2>
+    </div>
+    <div class="open-source__copy">
+      <p>VaaniFlow is published under the MIT license. Read the implementation, follow releases, open an issue, or contribute an improvement.</p>
+      <div class="open-source__links">
+        <ButtonLink href={siteConfig.githubUrl} variant="inverse" external>Browse source</ButtonLink>
+        <a href={siteConfig.releasesUrl} target="_blank" rel="noreferrer">View releases ↗</a>
+        <a href={siteConfig.issuesUrl} target="_blank" rel="noreferrer">Report an issue ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta shell" aria-labelledby="final-title">
+  <p class="mono-label">Ready when the cursor is</p>
+  <div>
+    <h2 id="final-title">Speak into the work already open.</h2>
+    <p>Configure your Azure speech deployment, choose a shortcut, and start dictating into Windows text fields.</p>
+  </div>
+  <ButtonLink href={siteConfig.downloadUrl} variant="primary" downloadAction>Download Vaani for Windows</ButtonLink>
+</section>
+
+<style>
+  .setup {
+    padding-block: var(--space-10);
+  }
+
+  .requirements {
+    display: grid;
+    margin-top: var(--space-8);
+    border-top: 1px solid var(--color-ink);
+  }
+
+  .requirements article {
+    display: grid;
+    min-height: 112px;
+    grid-template-columns: minmax(70px, 0.28fr) 1fr;
+    align-items: center;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .requirements article > span,
+  .requirements small {
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+  }
+
+  .requirements article > div {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.45fr) 1fr;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .requirements strong {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2vw, 1.75rem);
+    font-variation-settings: 'wdth' 92;
+    font-weight: 560;
+    letter-spacing: -0.035em;
+  }
+
+  .setup__actions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-5);
+    align-items: end;
+    margin-top: var(--space-6);
+  }
+
+  .setup__actions p {
+    max-width: 650px;
+    margin: 0;
+    color: var(--color-steel);
+    font-size: 0.8rem;
+  }
+
+  .setup__actions > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .open-source {
+    padding-block: var(--space-9);
+    background: var(--color-elevated);
+  }
+
+  .open-source__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+    gap: clamp(4rem, 10vw, 10rem);
+    align-items: end;
+  }
+
+  .open-source .mono-label {
+    color: #9aa3aa;
+  }
+
+  .open-source h2 {
+    max-width: 850px;
+    margin: var(--space-4) 0 0;
+    font-size: var(--text-h2);
+    font-variation-settings: 'wdth' 84;
+    font-weight: 610;
+    letter-spacing: -0.065em;
+    line-height: 0.94;
+  }
+
+  .open-source__copy > p {
+    margin-bottom: var(--space-5);
+    color: var(--color-steel);
+    font-size: 0.92rem;
+  }
+
+  .open-source__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .open-source__links > a:not(:first-child) {
+    padding-bottom: 0.2rem;
+    border-bottom: 1px solid var(--color-steel);
+    font-size: 0.72rem;
+    font-weight: 750;
+  }
+
+  .final-cta {
+    display: grid;
+    grid-template-columns: 0.45fr minmax(0, 1fr) auto;
+    gap: var(--space-5);
+    align-items: end;
+    padding-block: var(--space-9);
+  }
+
+  .final-cta h2 {
+    max-width: 740px;
+    margin-bottom: 0;
+    font-size: clamp(2.8rem, 5.5vw, 5.6rem);
+    font-variation-settings: 'wdth' 86;
+    font-weight: 610;
+    letter-spacing: -0.065em;
+    line-height: 0.92;
+  }
+
+  .final-cta div > p {
+    max-width: 610px;
+    margin: var(--space-4) 0 0;
+    color: var(--color-steel);
+    font-size: 0.86rem;
+  }
+
+  @media (max-width: 980px) {
+    .setup__actions,
+    .open-source__grid,
+    .final-cta {
+      grid-template-columns: 1fr;
+    }
+
+    .setup__actions,
+    .final-cta {
+      align-items: start;
+    }
+  }
+
+  @media (max-width: 719px) {
+    .requirements article {
+      grid-template-columns: 38px 1fr;
+    }
+
+    .requirements article > div {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+    }
+
+    .setup__actions > div,
+    .setup__actions :global(.button),
+    .final-cta :global(.button) {
+      width: 100%;
+    }
+
+    .open-source__links {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>
