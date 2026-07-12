@@ -35,11 +35,12 @@ const INTRUDE_WINDOW_MS = 700; // other key right after combo-down = app shortcu
 const FAILED_AUDIO_KEEP = 6; // rescued WAVs kept on disk before pruning oldest
 
 class Session extends EventEmitter {
-  constructor({ store, injector, getOverlay }) {
+  constructor({ store, injector, getOverlay, getRuntimeSettings }) {
     super();
     this.store = store;
     this.injector = injector;
     this.getOverlay = getOverlay;
+    this.getRuntimeSettings = getRuntimeSettings;
     this.state = 'idle'; // idle | recording | processing
     this.mode = 'ptt'; // ptt | handsfree
     this.downAt = 0;
@@ -55,6 +56,7 @@ class Session extends EventEmitter {
     this.prevTail = '';
     this.sessionWavs = []; // raw chunk audio, kept so a failed dictation is recoverable
     this.stoppedAt = 0; // per-stage latency telemetry
+    this.runtimeSettings = null; // config.json + regular app settings, fixed for this dictation
   }
 
   _sendOverlay(payload) {
@@ -156,22 +158,29 @@ class Session extends EventEmitter {
 
   _startRecording(mode) {
     if (this.state !== 'idle') return;
+    let settings;
+    try {
+      settings = this.getRuntimeSettings();
+    } catch (err) {
+      this._sendOverlay({ type: 'error', message: err.message });
+      return;
+    }
     this.state = 'recording';
     this.mode = mode;
     this.endedViaSpace = false;
     this._resetPipeline();
-    const s = this.store.settings;
-    warmup(s);
-    polishWarmup(s);
+    this.runtimeSettings = settings;
+    warmup(settings);
+    polishWarmup(settings);
     this.appInfo = null;
     this.injector.foreground().then((info) => { this.appInfo = info; }).catch(() => {});
     this._sendOverlay({
       type: 'start',
       mode,
-      micDeviceId: s.micDeviceId,
-      sounds: !!s.sounds,
-      fastMode: s.fastMode !== false,
-      autoStopSec: Number(s.autoStopSec) || 0
+      micDeviceId: settings.micDeviceId,
+      sounds: !!settings.sounds,
+      fastMode: settings.fastMode !== false,
+      autoStopSec: Number(settings.autoStopSec) || 0
     });
     clearTimeout(this.maxTimer);
     this.maxTimer = setTimeout(() => this.stop(), MAX_RECORD_MS);
@@ -202,7 +211,7 @@ class Session extends EventEmitter {
     this.chunkTexts.push(null);
     const wavBuffer = Buffer.from(wavArrayBuffer);
     this.sessionWavs.push(wavBuffer);
-    const settings = this.store.settings;
+    const settings = this.runtimeSettings;
     this.chunkChain = this.chunkChain.then(async () => {
       if (gen !== this.gen) return;
       try {
@@ -264,7 +273,7 @@ class Session extends EventEmitter {
       return;
     }
 
-    const settings = this.store.settings;
+    const settings = this.runtimeSettings;
     let text = this.chunkTexts.filter(Boolean).join(' ');
     let polished = false;
     let rawText = ''; // pre-polish text, kept when fixes changed it (Insights diffs them)

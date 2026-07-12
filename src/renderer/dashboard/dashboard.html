@@ -229,52 +229,44 @@
         <h1>Settings</h1>
 
         <div class="settings-group">
-          <h2>Transcription server</h2>
-          <p class="group-hint">Your LocalAI / OpenAI-compatible Whisper endpoint (e.g. the service in your AKS cluster).</p>
-          <label>Server URL
-            <input id="set-baseUrl" type="text" placeholder="https://whisper.example.com" spellcheck="false" />
-          </label>
-          <label>API key
-            <input id="set-apiKey" type="password" placeholder="(optional)" spellcheck="false" />
+          <h2>Azure OpenAI</h2>
+          <p class="group-hint">VaaniFlow reads the Azure endpoint, API key, Whisper deployment, and polish deployment from a local configuration file. The file is reloaded before each dictation.</p>
+          <span class="field-label">Configuration file</span>
+          <code id="config-path" class="config-path">Loading…</code>
+          <pre class="config-example">{
+  "baseUrl": "https://your-resource.openai.azure.com",
+  "apiKey": "your-api-key",
+  "apiVersion": "2024-10-21",
+  "whisperDeployment": "whisper",
+  "llmDeployment": "gpt40"
+}</pre>
+          <label>Language
+            <select id="set-language">
+              <option value="auto">Auto-detect</option>
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="ja">Japanese</option>
+              <option value="zh">Chinese</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="ar">Arabic</option>
+            </select>
           </label>
           <div class="row">
-            <label>Whisper model
-              <input id="set-model" type="text" placeholder="whisper-1" spellcheck="false" />
-            </label>
-            <label>Language
-              <select id="set-language">
-                <option value="auto">Auto-detect</option>
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
-                <option value="ja">Japanese</option>
-                <option value="zh">Chinese</option>
-                <option value="pt">Portuguese</option>
-                <option value="ru">Russian</option>
-                <option value="ar">Arabic</option>
-              </select>
-            </label>
-          </div>
-          <div class="row">
+            <button id="btn-open-config" class="secondary-btn">Open config file</button>
+            <button id="btn-reload-config" class="secondary-btn">Reload</button>
             <button id="btn-test" class="primary-btn">Test connection</button>
-            <span id="test-result"></span>
           </div>
+          <span id="config-status"></span>
+          <span id="test-result"></span>
         </div>
 
         <div class="settings-group">
           <h2>AI polish</h2>
-          <p class="group-hint">A chat model cleans transcripts: filler words out, self-corrections resolved, punctuation fixed. Leave the endpoint empty to use the Whisper server above, or point it at any OpenAI-compatible provider (a fast one like Groq or Cerebras keeps polish under a second). If the deadline passes, the raw transcript is pasted instead, so dictation never waits on a slow model. Writing style lives on the Style page.</p>
-          <label>Chat model
-            <input id="set-chatModel" type="text" placeholder="e.g. llama-3.1-8b-instant or qwen2.5-3b-instruct" spellcheck="false" />
-          </label>
-          <label>Polish endpoint (optional, for a separate provider)
-            <input id="set-polishBaseUrl" type="text" placeholder="e.g. https://api.groq.com/openai" spellcheck="false" />
-          </label>
-          <label>Polish API key
-            <input id="set-polishApiKey" type="password" placeholder="key for the polish endpoint" spellcheck="false" />
-          </label>
+          <p class="group-hint">Transcript cleanup uses <code>llmDeployment</code> from config.json on the same Azure endpoint and API key. Leave it empty to disable the LLM stage. If the deadline passes, the raw transcript is pasted instead.</p>
           <div class="row">
             <label>Polish deadline
               <select id="set-polishTimeoutSec">

@@ -1,4 +1,4 @@
-// Tiny JSON-file persistence for settings + transcript history. No deps.
+// Local JSON persistence for user settings, Azure configuration, and history.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -40,10 +40,84 @@ class JsonFile {
   }
 }
 
-const SETTINGS_DEFAULTS = {
+const CONFIG_DEFAULTS = {
   baseUrl: '',
   apiKey: '',
-  model: 'whisper-1',
+  apiVersion: '2024-10-21',
+  whisperDeployment: '',
+  llmDeployment: ''
+};
+
+class ConfigurationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConfigurationError';
+  }
+}
+
+class EditableConfig {
+  constructor(filePath, seed = {}) {
+    this.filePath = filePath;
+    this.data = null;
+    if (!fs.existsSync(filePath)) this._write({ ...CONFIG_DEFAULTS, ...seed });
+    else {
+      try { this.load(); } catch { this.data = null; }
+    }
+  }
+
+  _normalize(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const normalized = {};
+    for (const [key, fallback] of Object.entries(CONFIG_DEFAULTS)) {
+      const current = source[key];
+      normalized[key] = typeof current === 'string' ? current.trim() : fallback;
+    }
+    if (!normalized.apiVersion) normalized.apiVersion = CONFIG_DEFAULTS.apiVersion;
+    return normalized;
+  }
+
+  _write(value) {
+    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+    const normalized = this._normalize(value);
+    const tmp = this.filePath + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(normalized, null, 2) + '\n');
+    fs.renameSync(tmp, this.filePath);
+    this.data = normalized;
+    return normalized;
+  }
+
+  load() {
+    if (!fs.existsSync(this.filePath)) return this._write(CONFIG_DEFAULTS);
+    try {
+      const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('the root value must be a JSON object');
+      }
+      this.data = this._normalize(parsed);
+      return this.data;
+    } catch (err) {
+      throw new ConfigurationError(`Could not read config.json: ${err.message}`);
+    }
+  }
+
+  info() {
+    const config = this.load();
+    const missing = [];
+    if (!config.baseUrl) missing.push('baseUrl');
+    if (!config.apiKey) missing.push('apiKey');
+    if (!config.whisperDeployment) missing.push('whisperDeployment');
+    return {
+      path: this.filePath,
+      configured: missing.length === 0,
+      missing,
+      whisperDeployment: config.whisperDeployment,
+      llmDeployment: config.llmDeployment,
+      apiVersion: config.apiVersion
+    };
+  }
+}
+
+const SETTINGS_DEFAULTS = {
   language: 'auto',
   hotkey: 'ctrl+win',
   micDeviceId: 'default',
@@ -58,10 +132,7 @@ const SETTINGS_DEFAULTS = {
   replacements: [], // [{ from, to }] applied to transcripts after transcription
   spokenCommands: true, // "new line", "period", "scratch that"
   autoStopSec: 8, // end hands-free after this much silence (0 = never)
-  chatModel: '', // chat model for the polish stage ('' = disabled)
   polishEnabled: true,
-  polishBaseUrl: '', // separate OpenAI-compatible endpoint for polish ('' = same server as Whisper)
-  polishApiKey: '', // key for the polish endpoint (used alone when polishBaseUrl is set)
   polishTimeoutSec: 8, // polish deadline; on timeout the raw transcript is pasted
   defaultTone: 'neutral',
   autoTone: true, // auto-adapt tone to the target app (email/chat/AI prompt/code/docs)
@@ -75,10 +146,39 @@ const SETTINGS_DEFAULTS = {
   dictionaryDismissed: [] // suggestions the user rejected
 };
 
+const LEGACY_CONFIG_KEYS = [
+  'transcriptionProvider',
+  'baseUrl',
+  'apiKey',
+  'model',
+  'azureApiVersion',
+  'chatModel',
+  'polishBaseUrl',
+  'polishApiKey'
+];
+
 class Store {
   constructor(userDataDir) {
     this.settingsFile = new JsonFile(path.join(userDataDir, 'settings.json'), SETTINGS_DEFAULTS);
     this.historyFile = new JsonFile(path.join(userDataDir, 'history.json'), []);
+
+    const legacy = this.settingsFile.data;
+    this.configFile = new EditableConfig(path.join(userDataDir, 'config.json'), {
+      baseUrl: String(legacy.baseUrl || ''),
+      apiKey: String(legacy.apiKey || ''),
+      apiVersion: String(legacy.azureApiVersion || CONFIG_DEFAULTS.apiVersion),
+      whisperDeployment: String(legacy.model || ''),
+      llmDeployment: String(legacy.chatModel || '')
+    });
+
+    let migrated = false;
+    for (const key of LEGACY_CONFIG_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(this.settingsFile.data, key)) {
+        delete this.settingsFile.data[key];
+        migrated = true;
+      }
+    }
+    if (migrated) this.settingsFile.flush();
   }
 
   get settings() {
@@ -89,6 +189,31 @@ class Store {
     Object.assign(this.settingsFile.data, patch);
     this.settingsFile.save();
     return this.settingsFile.data;
+  }
+
+  runtimeSettings() {
+    const config = this.configFile.load();
+    return {
+      ...this.settings,
+      baseUrl: config.baseUrl,
+      apiKey: config.apiKey,
+      azureApiVersion: config.apiVersion,
+      model: config.whisperDeployment,
+      chatModel: config.llmDeployment
+    };
+  }
+
+  configInfo() {
+    return this.configFile.info();
+  }
+
+  get configPath() {
+    return this.configFile.filePath;
+  }
+
+  ensureConfigFile() {
+    if (!fs.existsSync(this.configPath)) this.configFile.load();
+    return this.configPath;
   }
 
   get history() {
@@ -131,4 +256,10 @@ class Store {
   }
 }
 
-module.exports = { Store, SETTINGS_DEFAULTS };
+module.exports = {
+  Store,
+  SETTINGS_DEFAULTS,
+  CONFIG_DEFAULTS,
+  EditableConfig,
+  ConfigurationError
+};

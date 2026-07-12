@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('vaani', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   testConnection: () => ipcRenderer.invoke('settings:test'),
+  getConfigInfo: () => ipcRenderer.invoke('config:info'),
+  openConfig: () => ipcRenderer.invoke('config:open'),
 
   // history
   getHistory: () => ipcRenderer.invoke('history:get'),

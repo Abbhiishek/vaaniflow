@@ -1,8 +1,7 @@
 # VaaniFlow
 
-Wispr Flow–style voice dictation for Windows, powered by your own self-hosted Whisper
-server (LocalAI / any OpenAI-compatible `/v1/audio/transcriptions` endpoint — e.g. the
-model running in your AKS cluster).
+Wispr Flow–style voice dictation for Windows, powered by Azure OpenAI Whisper and an
+optional Azure OpenAI chat deployment for transcript cleanup.
 
 Hold a hotkey anywhere in Windows, speak, release — your words are typed into whatever
 app has focus.
@@ -14,13 +13,22 @@ npm install
 npm start
 ```
 
-On first launch the dashboard opens on the Settings page:
+On first launch VaaniFlow creates `%APPDATA%/vaaniflow/config.json`. Open it from the
+Settings page and enter your Azure deployment details:
 
-1. **Server URL** — your LocalAI endpoint, e.g. `https://whisper.yourcluster.example.com`
-   (with or without `/v1`, both work).
-2. **API key** — if your server requires one (sent as `Authorization: Bearer …`).
-3. **Model** — the model name your server exposes (default `whisper-1`).
-4. Click **Test connection** — it probes `/v1/models` and lists what the server offers.
+```json
+{
+  "baseUrl": "https://your-resource.openai.azure.com",
+  "apiKey": "your-api-key",
+  "apiVersion": "2024-10-21",
+  "whisperDeployment": "whisper",
+  "llmDeployment": "gpt40"
+}
+```
+
+`llmDeployment` is optional. VaaniFlow reloads this file before every dictation, so
+changes take effect without rebuilding or restarting the app. The connection test sends
+a short silent WAV to verify the endpoint, key, API version, and Whisper deployment.
 
 ## Using it
 
@@ -50,36 +58,29 @@ toggle in Settings → Behavior).
 - **Style** — default tone, free-form style instructions for the AI polish stage,
   and per-app tone profiles
 - **Snippets** — spoken trigger phrases that insert saved text
-- **Settings** — server, AI polish model, microphone, hotkey, behavior, startup
+- **Settings** — Azure config file, microphone, hotkey, behavior, startup
 
 ## Local-first
 
 VaaniFlow is a local-first app: there is no account, no sign-in, and no cloud backend.
-Transcripts, settings, dictionary, and snippets live as JSON in `%APPDATA%/vaaniflow`.
-The only network calls the app makes are to the servers **you** configure: the Whisper
-transcription endpoint and (optionally) the AI-polish endpoint.
+Transcripts, settings, dictionary, snippets, and Azure configuration live as JSON in
+`%APPDATA%/vaaniflow`. The API key is stored as plain text in the user-editable
+`config.json`, so do not share that file. The only network calls are to the Azure OpenAI
+resource configured there.
 
 ## AI polish (optional)
 
-Set a chat model in Settings → AI polish and every transcript is cleaned by an LLM:
+Set `llmDeployment` in config.json and enable AI polish to clean every transcript with an LLM:
 filler words removed, self-corrections resolved ("Tuesday, no wait, Wednesday" →
 "Wednesday"), punctuation fixed. Tone can be set globally or per app ("slack" → casual,
 "outlook" → formal).
 
-The polish stage can run on a **different provider** than Whisper — any
-OpenAI-compatible `/v1/chat/completions` endpoint. Recommended setups:
-
-- **Fast hosted (best experience)** — Groq (`llama-3.1-8b-instant`) or Cerebras
-  (`llama3.1-8b`): ~1000+ tokens/s means polish finishes in well under a second.
-  Set "Polish endpoint" to e.g. `https://api.groq.com/openai` with its own API key.
-- **Same LocalAI server** — leave the endpoint empty and add a small chat model
-  next to Whisper (`qwen2.5-3b-instruct`, `llama-3.2-3b-instruct`); on CPU expect
-  a few seconds of polish for long dictations.
+The polish deployment uses the same `baseUrl`, `apiKey`, and `apiVersion` as Whisper.
+Only its Azure deployment name is separate, for example `gpt40`.
 
 The stage fails open *and fast*: output is validated (truncation, runaway or
 unrelated replies are rejected) and a configurable deadline (default 8 s) caps how
-long polishing may take — past it, the raw transcript is pasted. The polish
-endpoint's connection is warmed up while you're still speaking.
+long polishing may take — past it, the raw transcript is pasted.
 
 ## Voice commands & snippets
 
@@ -128,10 +129,10 @@ src/
     main.js         app entry, IPC, tray, single-instance
     session.js      dictation state machine (idle → recording → processing)
     hotkeys.js      global key hook (uiohook-napi), hold/tap detection
-    transcriber.js  LocalAI /v1/audio/transcriptions client
+    transcriber.js  Azure OpenAI Whisper transcription client
     injector.js     clipboard + Ctrl+V via persistent PowerShell SendInput helper
     windows.js      overlay + dashboard window factories
-    store.js        JSON persistence (settings + history) in %APPDATA%/vaaniflow
+    store.js        JSON persistence (config + settings + history) in %APPDATA%/vaaniflow
   preload/preload.js
   renderer/
     overlay/        always-on-top waveform pill (mic capture, 16 kHz WAV encoding)

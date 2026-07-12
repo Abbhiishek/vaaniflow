@@ -6,6 +6,7 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 let settings = {};
 let history = [];
 let saveTimer = null;
+let configInfo = null;
 
 // ---------------- navigation ----------------
 
@@ -357,17 +358,11 @@ function renderAll() {
 // ---------------- settings fields ----------------
 
 const FIELDS = {
-  baseUrl: { el: '#set-baseUrl', type: 'text' },
-  apiKey: { el: '#set-apiKey', type: 'text' },
-  model: { el: '#set-model', type: 'text' },
   language: { el: '#set-language', type: 'select' },
   micDeviceId: { el: '#set-mic', type: 'select' },
   hotkey: { el: '#set-hotkey', type: 'select' },
   vocabulary: { el: '#set-vocabulary', type: 'text' },
   autoLearnVocabulary: { el: '#set-autoLearnVocabulary', type: 'bool' },
-  chatModel: { el: '#set-chatModel', type: 'text' },
-  polishBaseUrl: { el: '#set-polishBaseUrl', type: 'text' },
-  polishApiKey: { el: '#set-polishApiKey', type: 'text' },
   polishTimeoutSec: { el: '#set-polishTimeoutSec', type: 'select' },
   defaultTone: { el: '#set-defaultTone', type: 'select' },
   autoTone: { el: '#set-autoTone', type: 'bool' },
@@ -398,22 +393,20 @@ function writeField(key, value) {
   else node.value = value ?? '';
 }
 
+function readSettingsPatch() {
+  const patch = {};
+  for (const k of Object.keys(FIELDS)) patch[k] = readField(k);
+  patch.polishTimeoutSec = Number(patch.polishTimeoutSec) || 8;
+  patch.autoStopSec = Number(patch.autoStopSec) || 0;
+  patch.windowTransparency = Number(patch.windowTransparency) || 0;
+  return patch;
+}
+
 function scheduleSave(key) {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    const patch = {};
-    for (const k of Object.keys(FIELDS)) patch[k] = readField(k);
-    patch.baseUrl = patch.baseUrl.trim();
-    patch.apiKey = patch.apiKey.trim();
-    patch.model = patch.model.trim() || 'whisper-1';
-    patch.chatModel = patch.chatModel.trim();
-    patch.polishBaseUrl = patch.polishBaseUrl.trim();
-    patch.polishApiKey = patch.polishApiKey.trim();
-    patch.polishTimeoutSec = Number(patch.polishTimeoutSec) || 8;
-    patch.autoStopSec = Number(patch.autoStopSec) || 0;
-    patch.windowTransparency = Number(patch.windowTransparency) || 0;
-    settings = await window.vaani.setSettings(patch);
-  }, ['baseUrl', 'apiKey', 'model', 'chatModel', 'polishBaseUrl', 'polishApiKey', 'vocabulary', 'styleInstructions', 'windowTransparency', 'accentColor'].includes(key) ? 500 : 0);
+    settings = await window.vaani.setSettings(readSettingsPatch());
+  }, ['vocabulary', 'styleInstructions', 'windowTransparency', 'accentColor'].includes(key) ? 500 : 0);
 }
 
 for (const key of Object.keys(FIELDS)) {
@@ -636,7 +629,37 @@ $('#snippet-add-btn').addEventListener('click', async () => {
   renderSnippets();
 });
 
-// ---------------- test connection ----------------
+// ---------------- Azure config + connection test ----------------
+
+async function refreshConfigInfo() {
+  configInfo = await window.vaani.getConfigInfo();
+  $('#config-path').textContent = configInfo.path || 'config.json';
+  const status = $('#config-status');
+  if (!configInfo.ok) {
+    status.textContent = configInfo.message || 'Could not read config.json';
+    status.className = 'fail';
+  } else if (!configInfo.configured) {
+    status.textContent = `Missing configuration: ${configInfo.missing.join(', ')}`;
+    status.className = 'fail';
+  } else {
+    const polish = configInfo.llmDeployment
+      ? `polish: ${configInfo.llmDeployment}`
+      : 'polish disabled';
+    status.textContent = `Ready — Whisper: ${configInfo.whisperDeployment}; ${polish}`;
+    status.className = 'ok';
+  }
+  return configInfo;
+}
+
+$('#btn-open-config').addEventListener('click', async () => {
+  const result = await window.vaani.openConfig();
+  if (!result.ok) toast(result.message || 'Could not open config.json');
+});
+
+$('#btn-reload-config').addEventListener('click', async () => {
+  await refreshConfigInfo();
+  toast(configInfo.ok ? 'Configuration reloaded' : 'Configuration has an error');
+});
 
 $('#btn-test').addEventListener('click', async () => {
   const btn = $('#btn-test');
@@ -645,9 +668,8 @@ $('#btn-test').addEventListener('click', async () => {
   out.className = '';
   out.textContent = 'Testing…';
   clearTimeout(saveTimer);
-  const patch = {};
-  for (const k of Object.keys(FIELDS)) patch[k] = readField(k);
-  settings = await window.vaani.setSettings(patch); // make sure current values are used
+  settings = await window.vaani.setSettings(readSettingsPatch());
+  await refreshConfigInfo();
   const result = await window.vaani.testConnection();
   out.textContent = result.message;
   out.className = result.ok ? 'ok' : 'fail';
@@ -713,6 +735,7 @@ async function populateMics() {
 
   for (const key of Object.keys(FIELDS)) writeField(key, settings[key]);
   applyAppearance();
+  await refreshConfigInfo();
 
   replacements = Array.isArray(settings.replacements) ? settings.replacements : [];
   appProfiles = Array.isArray(settings.appProfiles) ? settings.appProfiles : [];
@@ -723,9 +746,9 @@ async function populateMics() {
   renderSuggestions();
 
   $('#hotkey-fallback').hidden = uiohookAvailable;
-  $('#home-hint').textContent = settings.baseUrl
+  $('#home-hint').textContent = configInfo?.configured
     ? `Hold ${hotkeyLabels[settings.hotkey] || 'your hotkey'} anywhere and speak — everything you dictate lands here.`
-    : 'Set your Whisper server URL in Settings to get started.';
+    : 'Open config.json from Settings and add your Azure OpenAI deployment details.';
 
   renderAll();
   populateMics();
@@ -733,5 +756,5 @@ async function populateMics() {
   // update may have finished downloading before this window opened
   window.vaani.getUpdateState().then((u) => { if (u.ready) showUpdateBanner(u.version); });
 
-  if (!settings.baseUrl) showView('settings');
+  if (!configInfo?.configured) showView('settings');
 })();

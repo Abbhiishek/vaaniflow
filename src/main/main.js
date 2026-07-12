@@ -59,7 +59,12 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     overlayWin = createOverlayWindow();
-    session = new Session({ store, injector, getOverlay: () => overlayWin });
+    session = new Session({
+      store,
+      injector,
+      getOverlay: () => overlayWin,
+      getRuntimeSettings: () => store.runtimeSettings()
+    });
     session.on('history-changed', () => sendToDashboard('history:changed'));
 
     session.on('transcript-added', (entry) => {
@@ -120,7 +125,31 @@ if (!app.requestSingleInstanceLock()) {
       return next;
     });
 
-    ipcMain.handle('settings:test', () => testConnection(store.settings));
+    ipcMain.handle('settings:test', () => {
+      try {
+        return testConnection(store.runtimeSettings());
+      } catch (err) {
+        return { ok: false, message: err.message };
+      }
+    });
+
+    // ---- editable Azure config ----
+    ipcMain.handle('config:info', () => {
+      try {
+        return { ok: true, ...store.configInfo() };
+      } catch (err) {
+        return { ok: false, path: store.configPath, message: err.message };
+      }
+    });
+    ipcMain.handle('config:open', async () => {
+      try {
+        const configPath = store.ensureConfigFile();
+        const message = await shell.openPath(configPath);
+        return message ? { ok: false, message } : { ok: true, path: store.configPath };
+      } catch (err) {
+        return { ok: false, message: err.message, path: store.configPath };
+      }
+    });
 
     // ---- history ----
     ipcMain.handle('history:get', () => store.history);

@@ -2,7 +2,7 @@
   "name": "vaaniflow",
   "productName": "VaaniFlow",
   "version": "1.0.1",
-  "description": "Voice dictation for Windows — a Wispr Flow style client for your self-hosted Whisper (LocalAI) server.",
+  "description": "Voice dictation for Windows powered by Azure OpenAI Whisper and an optional Azure chat deployment.",
   "main": "src/main/main.js",
   "author": "Abhishek Kushwaha",
   "license": "MIT",
@@ -13,6 +13,7 @@
   "scripts": {
     "start": "electron .",
     "smoke": "electron . --smoke",
+    "test": "node --test",
     "icons": "node scripts/gen-icons.js",
     "dist": "npm run icons && electron-builder --win"
   },

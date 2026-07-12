@@ -1,11 +1,8 @@
-// LLM cleanup pass over the raw transcript via any OpenAI-compatible
-// /v1/chat/completions endpoint. The polish provider can be separate from the
-// Whisper server (settings.polishBaseUrl/polishApiKey) — e.g. Whisper on your
-// own cluster, polish on Groq/Cerebras for sub-second rewrites. Always fails
-// open: any error, timeout, or suspicious output returns the original text so
-// dictation never blocks on the polish stage.
+// Optional transcript cleanup through a chat deployment on the same Azure
+// OpenAI resource and API key used by Whisper. Always fails open: any error,
+// timeout, or suspicious output returns the original transcript.
 'use strict';
-const { normalizeBaseUrl } = require('./transcriber');
+const { DEFAULT_AZURE_API_VERSION, normalizeAzureEndpoint } = require('./transcriber');
 
 const SYSTEM_PROMPT = [
   'You clean up raw speech-to-text transcripts.',
@@ -25,36 +22,36 @@ const TONE_HINTS = {
   prompt: 'This is an instruction for an AI assistant. Keep it imperative, precise, and unambiguous; preserve technical terms, file names, and identifiers exactly as spoken.'
 };
 
-// Resolve which endpoint/key/model the polish stage talks to. A dedicated
-// polish endpoint uses only its own key (never leak the Whisper key to a
-// third-party provider); otherwise fall back to the Whisper server.
 function polishConfig(settings) {
-  const ownBase = normalizeBaseUrl(settings.polishBaseUrl);
-  const base = ownBase || normalizeBaseUrl(settings.baseUrl);
-  const apiKey = ownBase
-    ? String(settings.polishApiKey || '').trim()
-    : String(settings.polishApiKey || settings.apiKey || '').trim();
-  const model = String(settings.chatModel || '').trim();
-  return base && model ? { base, apiKey, model } : null;
+  const base = normalizeAzureEndpoint(settings.baseUrl);
+  const apiKey = String(settings.apiKey || '').trim();
+  const deployment = String(settings.chatModel || '').trim();
+  const apiVersion = String(settings.azureApiVersion || DEFAULT_AZURE_API_VERSION).trim();
+  if (!base || !apiKey || !deployment) return null;
+  return {
+    base,
+    apiKey,
+    deployment,
+    apiVersion,
+    url: `${base}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`,
+    headers: { 'api-key': apiKey }
+  };
 }
 
 function shouldPolish(text, settings) {
   if (settings.polishEnabled === false) return false;
   if (!polishConfig(settings)) return false;
   const words = String(text).split(/\s+/).filter(Boolean);
-  return text.length >= 15 && words.length >= 4; // "yes" doesn't need an LLM round-trip
+  return text.length >= 15 && words.length >= 4;
 }
 
-// Cheap similarity guard: fraction of the original's words that survive into
-// the reply. Filler removal drops some, but a model that answered a question
-// or rewrote from scratch shares almost nothing.
 function wordOverlap(original, reply) {
   const tokenize = (s) => String(s).toLowerCase().match(/[\p{L}\p{N}']+/gu) || [];
   const src = tokenize(original);
   if (!src.length) return 1;
   const replySet = new Set(tokenize(reply));
   let kept = 0;
-  for (const w of src) if (replySet.has(w)) kept++;
+  for (const word of src) if (replySet.has(word)) kept++;
   return kept / src.length;
 }
 
@@ -62,14 +59,10 @@ async function polishText(text, settings, tone) {
   if (!shouldPolish(text, settings)) return { text, polished: false };
   const config = polishConfig(settings);
 
-  const headers = { 'Content-Type': 'application/json' };
-  if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
-
   let system = SYSTEM_PROMPT + (TONE_HINTS[tone] ? ' ' + TONE_HINTS[tone] : '');
   const style = String(settings.styleInstructions || '').trim().slice(0, 600);
   if (style) system += ` The user's writing style preferences: ${style}`;
   const body = {
-    model: config.model,
     temperature: 0.2,
     max_tokens: Math.min(4096, Math.ceil(text.length / 2) + 256),
     messages: [
@@ -78,29 +71,24 @@ async function polishText(text, settings, tone) {
     ]
   };
 
-  // Hard deadline: fail-open must also fail fast — a slow polish model should
-  // cost at most this budget, then the raw transcript is pasted instead.
   const timeoutMs = Math.max(2, Number(settings.polishTimeoutSec) || 8) * 1000;
 
   try {
-    const res = await fetch(`${config.base}/v1/chat/completions`, {
+    const res = await fetch(config.url, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json', ...config.headers },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const choice = data?.choices?.[0];
-    // length-truncated output would paste the user's words cut off mid-sentence
     if (choice?.finish_reason && choice.finish_reason !== 'stop') {
       throw new Error(`finish_reason=${choice.finish_reason}`);
     }
     let reply = String(choice?.message?.content || '').trim();
-    // strip wrappers a small model sometimes adds
     reply = reply.replace(/^```[a-z]*\n?|```$/g, '').trim();
     if (/^".*"$/s.test(reply) && !/^".*"$/s.test(text.trim())) reply = reply.slice(1, -1).trim();
-    // sanity: reject empty, wildly inflated, gutted, or unrelated output
     if (!reply || reply.length > text.length * 3) return { text, polished: false };
     if (text.length > 80 && reply.length < text.length * 0.25) return { text, polished: false };
     if (text.length > 40 && wordOverlap(text, reply) < 0.5) return { text, polished: false };
@@ -111,16 +99,7 @@ async function polishText(text, settings, tone) {
   }
 }
 
-// Fire-and-forget: open the TCP/TLS connection to the polish provider while
-// the user is still speaking. Skipped when polish shares the Whisper server
-// (the transcriber warmup already covers it).
-function polishWarmup(settings) {
-  if (settings.polishEnabled === false) return;
-  const config = polishConfig(settings);
-  if (!config || config.base === normalizeBaseUrl(settings.baseUrl)) return;
-  const headers = {};
-  if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
-  fetch(`${config.base}/v1/models`, { headers, signal: AbortSignal.timeout(4000) }).catch(() => {});
-}
+// Whisper warmup already opens the same Azure resource connection.
+function polishWarmup() {}
 
 module.exports = { polishText, shouldPolish, polishConfig, polishWarmup };
