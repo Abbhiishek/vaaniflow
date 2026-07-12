@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, ipcMain, clipboard, shell, Notification, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, shell, Menu, Notification, nativeImage } = require('electron');
 const { Store } = require('./store');
 const { Injector } = require('./injector');
 const { Hotkeys, HOTKEY_LABELS, uiohookAvailable, hotkeyLabel, isValidHotkeyId } = require('./hotkeys');
@@ -123,6 +123,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     app.setAppUserModelId(APP_USER_MODEL_ID);
+    if (app.isPackaged) Menu.setApplicationMenu(null);
 
     const userDataDir = app.getPath('userData');
     migrateLegacyUserData(userDataDir);

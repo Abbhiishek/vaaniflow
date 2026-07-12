@@ -1,7 +1,8 @@
 // Window factory: the always-on-top overlay pill and the dashboard.
 'use strict';
 const path = require('path');
-const { BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
+const { hardenWindowForProduction } = require('./window-security');
 
 const PRELOAD = path.join(__dirname, '..', 'preload', 'preload.js');
 const OVERLAY_W = 420;
@@ -37,9 +38,11 @@ function createOverlayWindow() {
       preload: PRELOAD,
       contextIsolation: true,
       nodeIntegration: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      devTools: !app.isPackaged
     }
   });
+  hardenWindowForProduction(win, app.isPackaged);
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
@@ -81,9 +84,11 @@ function createDashboardWindow(iconPath, settings) {
     webPreferences: {
       preload: PRELOAD,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      devTools: !app.isPackaged
     }
   });
+  hardenWindowForProduction(win, app.isPackaged);
   win.loadFile(path.join(__dirname, '..', 'renderer', 'dashboard', 'dashboard.html'));
   win.setMenuBarVisibility(false);
   return win;
