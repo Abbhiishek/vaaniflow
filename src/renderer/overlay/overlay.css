@@ -1,3 +1,8 @@
+:root {
+  --accent: #e8e9eb;
+  --accent-text: #101113;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -17,16 +22,15 @@ html, body {
 #stage {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  padding-bottom: 10px;
-  gap: 8px;
+  pointer-events: none;
 }
 
 /* live transcription caption above the pill */
 #caption {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  width: max-content;
   max-width: 390px;
   background: rgba(16, 16, 18, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -41,9 +45,15 @@ html, body {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  transform: translateX(-50%);
 }
 
 #pill {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  --pin-x: -50%;
+  --pin-y: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -56,8 +66,32 @@ html, body {
   transition: width 0.22s cubic-bezier(.4,0,.2,1), height 0.22s cubic-bezier(.4,0,.2,1),
               opacity 0.25s ease, background 0.2s ease;
   pointer-events: auto;
-  cursor: pointer;
+  cursor: grab;
   flex: 0 0 auto;
+  transform: translate(var(--pin-x), var(--pin-y));
+}
+
+body[data-position$="-left"] #pill,
+body[data-position="left-center"] #pill { left: 10px; right: auto; --pin-x: 0; }
+body[data-position$="-right"] #pill,
+body[data-position="right-center"] #pill { right: 10px; left: auto; --pin-x: 0; }
+body[data-position^="top-"] #pill { top: 10px; bottom: auto; }
+body[data-position="left-center"] #pill,
+body[data-position="right-center"] #pill { top: 50%; bottom: auto; --pin-y: -50%; }
+
+body[data-position$="-left"] #caption,
+body[data-position="left-center"] #caption { left: 10px; right: auto; transform: none; }
+body[data-position$="-right"] #caption,
+body[data-position="right-center"] #caption { right: 10px; left: auto; transform: none; }
+body[data-position^="top-"] #caption { top: 64px; bottom: auto; }
+body[data-position="left-center"] #caption,
+body[data-position="right-center"] #caption { top: auto; bottom: calc(50% + 31px); }
+
+body.is-dragging #pill {
+  cursor: grabbing;
+  border-color: color-mix(in srgb, var(--accent) 58%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent), 0 10px 34px rgba(0, 0, 0, 0.52);
+  transition: none;
 }
 
 #idle-content, #rec-content, #msg-content {
@@ -72,16 +106,19 @@ html, body {
 #pill.state-idle:hover { width: 150px; height: 34px; opacity: 1; }
 #pill.state-idle:hover #idle-content { display: flex; }
 #idle-content { color: #b9bbc0; font-size: 12px; padding: 0 14px; }
-#mic-icon { color: #d6d7da; flex: 0 0 auto; }
-body.flow-bar-hidden #pill.state-idle { opacity: 0; pointer-events: none; transform: translateY(12px); }
+#mic-icon { color: var(--accent); flex: 0 0 auto; }
+body.flow-bar-hidden #pill.state-idle {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(var(--pin-x), calc(var(--pin-y) + 12px));
+}
 
 /* ---------- recording ---------- */
 #pill.state-recording {
   width: 320px;
   height: 46px;
   opacity: 1;
-  border-color: rgba(255, 255, 255, 0.16);
-  cursor: default;
+  border-color: color-mix(in srgb, var(--accent) 34%, rgba(255, 255, 255, 0.12));
 }
 #pill.state-recording #rec-content { display: flex; padding: 0 10px; width: 100%; }
 
@@ -108,8 +145,8 @@ body.flow-bar-hidden #pill.state-idle { opacity: 0; pointer-events: none; transf
 }
 #btn-cancel { background: rgba(255,255,255,0.07); color: #8f9297; }
 #btn-cancel:hover { background: rgba(217, 138, 138, 0.2); color: #d98a8a; }
-#btn-stop { background: #e8e9eb; color: #101113; }
-#btn-stop:hover { background: #ffffff; }
+#btn-stop { background: var(--accent); color: var(--accent-text); }
+#btn-stop:hover { background: color-mix(in srgb, var(--accent) 82%, white); }
 
 /* ---------- processing / done / error ---------- */
 #pill.state-processing, #pill.state-done, #pill.state-error {

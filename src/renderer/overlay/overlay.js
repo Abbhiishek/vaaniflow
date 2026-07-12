@@ -14,6 +14,7 @@ const idleLabel = document.getElementById('idle-label');
 let uiState = 'idle';
 let msgResetTimer = null;
 let showFlowBar = true;
+let waveRgb = { r: 232, g: 233, b: 235 };
 
 // ---------------- audio capture ----------------
 
@@ -323,7 +324,7 @@ function drawLoop() {
     const x = i * (bw + gap);
     const y = (h - bh) / 2;
     const alpha = 0.3 + 0.65 * (i / BAR_COUNT);
-    waveCtx.fillStyle = `rgba(232, 233, 235, ${alpha.toFixed(2)})`;
+    waveCtx.fillStyle = `rgba(${waveRgb.r}, ${waveRgb.g}, ${waveRgb.b}, ${alpha.toFixed(2)})`;
     roundBar(waveCtx, x, y, bw, bh, bw / 2);
   }
 
@@ -367,11 +368,24 @@ async function refreshOverlayPreferences() {
   try {
     const result = await window.vaani.getSettings();
     showFlowBar = result.settings.showFlowBar !== false;
+    const accent = /^#[0-9a-f]{6}$/i.test(String(result.settings.accentColor || ''))
+      ? result.settings.accentColor
+      : '#e8e9eb';
+    waveRgb = {
+      r: parseInt(accent.slice(1, 3), 16),
+      g: parseInt(accent.slice(3, 5), 16),
+      b: parseInt(accent.slice(5, 7), 16)
+    };
+    const luma = waveRgb.r * 0.299 + waveRgb.g * 0.587 + waveRgb.b * 0.114;
+    document.documentElement.style.setProperty('--accent', accent);
+    document.documentElement.style.setProperty('--accent-text', luma > 150 ? '#101113' : '#ffffff');
+    document.body.dataset.position = result.settings.overlayPosition || 'bottom-center';
     document.body.classList.toggle('flow-bar-hidden', !showFlowBar && uiState === 'idle');
   } catch {}
 }
 
 window.vaani.onSettingsChanged(refreshOverlayPreferences);
+window.vaani.onOverlayPosition((position) => { document.body.dataset.position = position; });
 refreshOverlayPreferences();
 
 function flashMessage(state, text, ms) {
@@ -450,9 +464,79 @@ window.vaani.onSession(async (msg) => {
 
 // Window is click-through by default; enable input only while over the pill.
 pill.addEventListener('mouseenter', () => window.vaani.setHover(true));
-pill.addEventListener('mouseleave', () => window.vaani.setHover(false));
+pill.addEventListener('mouseleave', () => {
+  if (!dragGesture?.active) window.vaani.setHover(false);
+});
+
+let dragGesture = null;
+let dragMoveRaf = null;
+let pendingDragPoint = null;
+let suppressClick = false;
+
+function pointerPoint(event) {
+  return { screenX: event.screenX, screenY: event.screenY };
+}
+
+function queueDragMove(point) {
+  pendingDragPoint = point;
+  if (dragMoveRaf) return;
+  dragMoveRaf = requestAnimationFrame(() => {
+    dragMoveRaf = null;
+    if (pendingDragPoint) window.vaani.moveOverlayDrag(pendingDragPoint);
+    pendingDragPoint = null;
+  });
+}
+
+function endDragGesture(event) {
+  if (!dragGesture || event.pointerId !== dragGesture.pointerId) return;
+  const point = pointerPoint(event);
+  if (dragMoveRaf) cancelAnimationFrame(dragMoveRaf);
+  dragMoveRaf = null;
+  pendingDragPoint = null;
+  if (dragGesture.active) {
+    window.vaani.moveOverlayDrag(point);
+    window.vaani.endOverlayDrag(point);
+    document.body.classList.remove('is-dragging');
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 0);
+  }
+  try { pill.releasePointerCapture(event.pointerId); } catch {}
+  dragGesture = null;
+}
+
+pill.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0 || event.target.closest('button')) return;
+  dragGesture = {
+    pointerId: event.pointerId,
+    startX: event.screenX,
+    startY: event.screenY,
+    active: false
+  };
+  pill.setPointerCapture(event.pointerId);
+});
+
+pill.addEventListener('pointermove', (event) => {
+  if (!dragGesture || event.pointerId !== dragGesture.pointerId) return;
+  if (!dragGesture.active) {
+    const distance = Math.hypot(event.screenX - dragGesture.startX, event.screenY - dragGesture.startY);
+    if (distance < 6) return;
+    dragGesture.active = true;
+    suppressClick = true;
+    document.body.classList.add('is-dragging');
+    window.vaani.beginOverlayDrag(pointerPoint(event));
+  }
+  queueDragMove(pointerPoint(event));
+});
+
+pill.addEventListener('pointerup', endDragGesture);
+pill.addEventListener('pointercancel', endDragGesture);
 
 pill.addEventListener('click', (e) => {
+  if (suppressClick) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
   if (uiState === 'idle') window.vaani.overlayAction('toggle');
 });
 document.getElementById('btn-stop').addEventListener('click', (e) => {

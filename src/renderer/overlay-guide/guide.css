@@ -1,0 +1,81 @@
+:root { --accent: #e8e9eb; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+}
+
+#pin-guide {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, transparent 35%, rgba(4, 5, 7, 0.08) 100%),
+    rgba(6, 7, 9, 0.04);
+}
+
+.pin-target {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
+  height: 42px;
+  padding: 0 12px;
+  color: rgba(236, 237, 240, 0.68);
+  background: rgba(15, 16, 19, 0.7);
+  border: 1px dashed rgba(255, 255, 255, 0.26);
+  border-radius: 13px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(10px);
+  opacity: 0.72;
+  transform: scale(0.94);
+  transition: opacity 120ms ease, transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.pin-target i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.pin-target span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.pin-target.active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 82%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent), 0 10px 34px rgba(0, 0, 0, 0.34);
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+.pin-target.active i {
+  background: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.top-left { top: 18px; left: 18px; }
+.top-center { top: 18px; left: 50%; transform: translateX(-50%) scale(0.94); }
+.top-center.active { transform: translateX(-50%) scale(1.04); }
+.top-right { top: 18px; right: 18px; }
+.left-center { top: 50%; left: 18px; transform: translateY(-50%) scale(0.94); }
+.left-center.active { transform: translateY(-50%) scale(1.04); }
+.right-center { top: 50%; right: 18px; transform: translateY(-50%) scale(0.94); }
+.right-center.active { transform: translateY(-50%) scale(1.04); }
+.bottom-left { bottom: 18px; left: 18px; }
+.bottom-center { bottom: 18px; left: 50%; transform: translateX(-50%) scale(0.94); }
+.bottom-center.active { transform: translateX(-50%) scale(1.04); }
+.bottom-right { right: 18px; bottom: 18px; }
