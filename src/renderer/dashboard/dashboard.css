@@ -20,7 +20,20 @@
   --ok: #8fc4a4;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* the hidden attribute must always win — author display rules (e.g. the
    update banner's flex) silently override the browser's [hidden] otherwise */
@@ -698,7 +711,6 @@ input[type='color'] {
   color: var(--text);
   font-size: 12px;
   overflow-wrap: anywhere;
-  user-select: text;
 }
 .config-example {
   margin: 0;
