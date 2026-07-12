@@ -243,7 +243,6 @@ window.vaani.onHistoryChanged(async () => {
 // ---------------- insights ----------------
 
 const TYPING_WPM = 40; // average typing speed the "time saved" stat compares against
-const WISPR_FLOW_USD_PER_MONTH = 12; // Wispr Flow Pro, annual billing
 
 // function words excluded from the "Top words" ranking so it surfaces what the
 // user actually talks about, not English plumbing
@@ -257,9 +256,21 @@ function tokenizeWords(s) {
 function renderStats() {
   const totalWords = history.reduce((n, e) => n + e.words, 0);
   const totalMs = history.reduce((n, e) => n + e.durationMs, 0);
+  const averageWpm = totalMs > 3000 ? Math.round(totalWords / (totalMs / 60000)) : null;
+  const days = new Set(history.map((e) => new Date(e.ts).toDateString()));
   $('#stat-words').textContent = totalWords.toLocaleString();
   $('#stat-count').textContent = history.length.toLocaleString();
-  $('#stat-wpm').textContent = totalMs > 3000 ? Math.round(totalWords / (totalMs / 60000)) : '–';
+  $('#stat-wpm').textContent = averageWpm ?? '–';
+
+  const reachedMilestone = [100000, 50000, 25000, 10000, 5000, 1000]
+    .find((milestone) => totalWords >= milestone);
+  $('#stat-milestone').textContent = reachedMilestone
+    ? `${new Intl.NumberFormat([], { notation: 'compact', maximumFractionDigits: 0 }).format(reachedMilestone)} milestone`
+    : 'Building momentum';
+  $('#stat-count-sub').textContent = `${days.size.toLocaleString()} active day${days.size === 1 ? '' : 's'}`;
+  $('#stat-wpm-sub').textContent = averageWpm
+    ? `${(averageWpm / TYPING_WPM).toFixed(1)}× typical typing pace`
+    : 'Compared with typing';
 
   // ---- savings ----
   const chars = history.reduce((n, e) => n + e.text.length, 0);
@@ -276,13 +287,15 @@ function renderStats() {
     const d = new Date(e.ts);
     return `${d.getFullYear()}-${d.getMonth()}`;
   })).size;
-  $('#stat-cost').textContent = `$${monthsActive * WISPR_FLOW_USD_PER_MONTH}`;
-  $('#stat-cost-sub').textContent = monthsActive
-    ? `$${WISPR_FLOW_USD_PER_MONTH}/mo × ${monthsActive} month${monthsActive === 1 ? '' : 's'} of dictating`
-    : `$${WISPR_FLOW_USD_PER_MONTH}/mo subscription you didn't pay`;
+  $('#stat-words-sub').textContent = monthsActive
+    ? `${days.size.toLocaleString()} active days across ${monthsActive} month${monthsActive === 1 ? '' : 's'}`
+    : 'Across all your dictations';
+  $('#insights-period-label').textContent = monthsActive
+    ? `${monthsActive} active month${monthsActive === 1 ? '' : 's'}`
+    : 'All-time overview';
+  $('#active-days-badge').textContent = `${days.size.toLocaleString()} active day${days.size === 1 ? '' : 's'}`;
 
   // streak: consecutive days (ending today or yesterday) with ≥1 dictation
-  const days = new Set(history.map((e) => new Date(e.ts).toDateString()));
   let streak = 0;
   const cursor = new Date();
   if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1); // grace: today not yet used
@@ -291,6 +304,7 @@ function renderStats() {
     cursor.setDate(cursor.getDate() - 1);
   }
   $('#stat-streak').textContent = streak;
+  $('#stat-streak-sub').textContent = streak > 1 ? `${streak} days and counting` : 'Keep the rhythm going';
 
   const hour = new Date().getHours();
   $('#greeting').textContent = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -379,12 +393,19 @@ function renderTopApps() {
     row.className = 'app-row';
     const left = document.createElement('div');
     left.className = 'app-name';
+    const icon = document.createElement('span');
+    icon.className = 'app-icon';
+    icon.textContent = app.split(/[\s.]+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+    const details = document.createElement('div');
+    details.className = 'app-details';
     const name = document.createElement('div');
+    name.className = 'app-title';
     name.textContent = app;
     const bar = document.createElement('div');
     bar.className = 'app-bar';
     bar.style.width = `${Math.max(6, Math.round((words / max) * 100))}%`;
-    left.append(name, bar);
+    details.append(name, bar);
+    left.append(icon, details);
     const count = document.createElement('span');
     count.className = 'app-words';
     count.textContent = `${words.toLocaleString()} words`;

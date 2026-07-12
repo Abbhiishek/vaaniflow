@@ -91,55 +91,63 @@
 
       <!-- ============ INSIGHTS ============ -->
       <section id="view-insights" class="view">
-        <h1>Insights</h1>
-        <p class="subtitle">Your dictation activity at a glance.</p>
+        <div class="insights-heading">
+          <div>
+            <span class="insights-kicker">Voice intelligence</span>
+            <h1>Your voice, compounding.</h1>
+            <p class="subtitle">A private, on-device view of the time and momentum you build by speaking.</p>
+          </div>
+          <div class="insights-period"><span></span><strong id="insights-period-label">All-time overview</strong><small>Updated locally</small></div>
+        </div>
 
         <div id="stats-grid">
-          <div class="stat-card"><span class="stat-value" id="stat-words">0</span><span class="stat-label">Words dictated</span></div>
-          <div class="stat-card"><span class="stat-value" id="stat-count">0</span><span class="stat-label">Dictations</span></div>
-          <div class="stat-card"><span class="stat-value" id="stat-wpm">–</span><span class="stat-label">Avg words/min</span></div>
-          <div class="stat-card"><span class="stat-value" id="stat-streak">0</span><span class="stat-label">Day streak</span></div>
+          <div class="stat-card stat-card-featured">
+            <div class="stat-card-top"><span class="stat-kicker">Words dictated</span><span class="milestone-chip" id="stat-milestone">Building momentum</span></div>
+            <span class="stat-value" id="stat-words">0</span>
+            <span class="stat-sub" id="stat-words-sub">Across all your dictations</span>
+            <div class="voice-ribbon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="stat-card stat-card-compact"><span class="stat-symbol">01</span><span class="stat-value" id="stat-count">0</span><span class="stat-label">Dictations</span><span class="stat-sub" id="stat-count-sub">Sessions captured</span></div>
+          <div class="stat-card stat-card-compact"><span class="stat-symbol">02</span><span class="stat-value" id="stat-wpm">–</span><span class="stat-label">Avg words/min</span><span class="stat-sub" id="stat-wpm-sub">Compared with typing</span></div>
+          <div class="stat-card stat-card-compact streak-card"><span class="stat-symbol">03</span><span class="stat-value" id="stat-streak">0</span><span class="stat-label">Day streak</span><span class="stat-sub" id="stat-streak-sub">Keep the rhythm going</span></div>
         </div>
 
         <div id="savings-grid">
-          <div class="stat-card">
+          <div class="stat-card impact-card">
+            <span class="impact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 5h14v14H5V5zm2 2v2h2V7H7zm4 0v2h2V7h-2zm4 0v2h2V7h-2zM7 11v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zM7 15v2h6v-2H7zm8 0v2h2v-2h-2z"/></svg></span>
+            <span class="impact-copy"><span class="stat-label">Keystrokes saved</span><span class="stat-sub">Characters typed for you</span></span>
             <span class="stat-value" id="stat-keys">0</span>
-            <span class="stat-label">Keystrokes saved</span>
-            <span class="stat-sub">characters typed for you</span>
           </div>
-          <div class="stat-card">
+          <div class="stat-card impact-card">
+            <span class="impact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2zm1 11h5v-2h-4V6h-2v7z"/></svg></span>
+            <span class="impact-copy"><span class="stat-label">Time reclaimed</span><span class="stat-sub" id="stat-time-sub">Vs typing at 40 wpm</span></span>
             <span class="stat-value" id="stat-time">–</span>
-            <span class="stat-label">Time saved vs typing</span>
-            <span class="stat-sub" id="stat-time-sub">vs typing at 40 wpm</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="stat-cost">$0</span>
-            <span class="stat-label">Saved vs Wispr Flow</span>
-            <span class="stat-sub" id="stat-cost-sub">$12/mo subscription you didn't pay</span>
           </div>
         </div>
 
-        <div class="insight-card" id="heatmap-card">
-          <h3>Activity</h3>
-          <div id="heatmap"></div>
-          <div id="heatmap-legend"><span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span></div>
+        <div id="insights-overview">
+          <div class="insight-card" id="heatmap-card">
+            <div class="insight-card-heading"><div><span class="insight-eyebrow">Consistency</span><h3>Six-month rhythm</h3></div><span class="insight-badge" id="active-days-badge">0 active days</span></div>
+            <div id="heatmap"></div>
+            <div id="heatmap-legend"><span>Quiet</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>Flowing</span></div>
+          </div>
+          <div class="insight-card" id="chart-card">
+            <div class="insight-card-heading"><div><span class="insight-eyebrow">Momentum</span><h3>Last 14 days</h3></div><span class="insight-badge">Daily words</span></div>
+            <div id="chart"></div>
+          </div>
         </div>
 
         <div id="insights-grid">
           <div class="insight-card">
-            <h3>Last 14 days</h3>
-            <div id="chart"></div>
-          </div>
-          <div class="insight-card">
-            <h3>Desktop usage</h3>
+            <div class="insight-card-heading"><div><span class="insight-eyebrow">Where you speak</span><h3>Desktop usage</h3></div></div>
             <div id="top-apps"></div>
           </div>
           <div class="insight-card">
-            <h3>Top words</h3>
+            <div class="insight-card-heading"><div><span class="insight-eyebrow">Your language</span><h3>Top words</h3></div></div>
             <div id="top-words"></div>
           </div>
           <div class="insight-card">
-            <h3>Words the AI fixes most</h3>
+            <div class="insight-card-heading"><div><span class="insight-eyebrow">Quietly improved</span><h3>AI fixes</h3></div></div>
             <div id="fixed-words"></div>
           </div>
         </div>
