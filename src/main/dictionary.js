@@ -55,13 +55,16 @@ function normalizeEntry(entry, fallbackSource = 'manual') {
 
 function normalizeEntries(entries, fallbackSource = 'manual') {
   const normalized = [];
-  const seen = new Set();
+  const seenTerms = new Set();
+  const seenIds = new Set();
   for (const raw of Array.isArray(entries) ? entries : []) {
     const entry = normalizeEntry(raw, fallbackSource);
     if (!entry) continue;
     const key = entryKey(entry.from);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (seenTerms.has(key)) continue;
+    seenTerms.add(key);
+    while (!entry.id || seenIds.has(entry.id)) entry.id = crypto.randomUUID();
+    seenIds.add(entry.id);
     normalized.push(entry);
     if (normalized.length >= MAX_ENTRIES) break;
   }

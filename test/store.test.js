@@ -109,6 +109,34 @@ test('migrates the legacy vocabulary and corrections into dictionary entries', (
   );
 });
 
+test('repairs persisted dictionary entries that have no stable IDs', (t) => {
+  const dir = tempUserData(t);
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({
+    dictionarySchemaVersion: 1,
+    dictionaryEntries: [
+      { from: 'Vaani', to: 'Vaani', starred: false },
+      { from: 'BTW', to: 'by the way', starred: true }
+    ]
+  }));
+
+  const store = new Store(dir);
+  const ids = store.settings.dictionaryEntries.map((entry) => entry.id);
+  assert.equal(ids.every(Boolean), true);
+  assert.equal(new Set(ids).size, ids.length);
+
+  const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+  assert.deepEqual(persisted.dictionaryEntries.map((entry) => entry.id), ids);
+});
+
+test('provides defaults for per-category styles and global cleanup', (t) => {
+  const store = new Store(tempUserData(t));
+  assert.equal(store.settings.personalStyle, 'casual');
+  assert.equal(store.settings.workStyle, 'casual');
+  assert.equal(store.settings.emailStyle, 'formal');
+  assert.equal(store.settings.otherStyle, 'formal');
+  assert.equal(store.settings.cleanupLevel, 'light');
+});
+
 test('saved account profile survives a full store restart', (t) => {
   const dir = tempUserData(t);
   const store = new Store(dir);

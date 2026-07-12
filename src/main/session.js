@@ -19,7 +19,7 @@ const { app } = require('electron');
 const { EventEmitter } = require('events');
 const { transcribe, warmup } = require('./transcriber');
 const { polishText, polishWarmup } = require('./polisher');
-const { pickTone } = require('./tones');
+const { pickStyle } = require('./tones');
 const { replacementRules } = require('./dictionary');
 const {
   cleanArtifacts,
@@ -27,6 +27,8 @@ const {
   applyScratchThat,
   applySpokenCommands,
   expandSnippets,
+  restoreSnippets,
+  snippetTokensPreserved,
   buildPrompt
 } = require('./postprocess');
 
@@ -285,8 +287,8 @@ class Session extends EventEmitter {
     }
   }
 
-  _pickTone(settings) {
-    return pickTone(this.appInfo, settings);
+  _pickStyle(settings) {
+    return pickStyle(this.appInfo, settings);
   }
 
   // ---- final audio arriving from the overlay renderer ------------------------
@@ -324,22 +326,38 @@ class Session extends EventEmitter {
     let polished = false;
     let rawText = ''; // pre-polish text, kept when fixes changed it (Insights diffs them)
 
-    // whole utterance is a snippet trigger → insert the snippet verbatim
+    text = applyScratchThat(text);
+    if (settings.spokenCommands !== false) text = applySpokenCommands(text);
+    rawText = text;
+
+    // A standalone trigger inserts verbatim. Inline triggers are masked while
+    // the surrounding dictation is polished, then restored exactly afterward.
     const snippet = expandSnippets(text, settings.snippets);
-    if (snippet.matched) {
+    if (snippet.standalone) {
       text = snippet.text;
     } else {
-      text = applyScratchThat(text);
-      if (settings.spokenCommands !== false) text = applySpokenCommands(text);
-      rawText = text;
+      text = snippet.text;
       if (text) {
         this._sendOverlay({ type: 'status', text: 'Polishing…' });
-        const result = await polishText(text, settings, this._pickTone(settings));
+        const result = await polishText(text, settings, this._pickStyle(settings));
         if (gen !== this.gen || this.state !== 'processing') return;
-        text = result.text;
-        polished = result.polished;
+        if (snippetTokensPreserved(result.text, snippet.matches)) {
+          text = result.text;
+          polished = result.polished;
+        } else {
+          console.warn('polish removed a protected snippet token; using the unpolished transcript');
+          text = snippet.text;
+          polished = false;
+        }
       }
       text = applyReplacements(text, replacementRules(settings));
+      const restored = restoreSnippets(text, snippet.matches);
+      if (!restored.complete) {
+        text = restoreSnippets(snippet.text, snippet.matches).text;
+        polished = false;
+      } else {
+        text = restored.text;
+      }
     }
 
     if (!text) {

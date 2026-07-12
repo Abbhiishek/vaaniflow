@@ -34,6 +34,34 @@ test('migrates vocabulary and corrections into unified dictionary entries', () =
   );
 });
 
+test('repairs missing and duplicate dictionary entry IDs', () => {
+  const patch = dictionarySettingsPatch([
+    { from: 'vani', to: 'Vaani' },
+    { id: 'same-id', from: 'Abhishek', to: 'Abhishek' },
+    { id: 'same-id', from: 'BTW', to: 'by the way' }
+  ]);
+
+  const ids = patch.dictionaryEntries.map((entry) => entry.id);
+  assert.equal(ids.every(Boolean), true);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(patch.dictionaryEntries[1].id, 'same-id');
+  assert.notEqual(patch.dictionaryEntries[2].id, 'same-id');
+});
+
+test('repairs IDs even when the dictionary schema is already current', () => {
+  const { changed, patch } = migrateLegacyDictionary({
+    dictionarySchemaVersion: 1,
+    dictionaryEntries: [
+      { from: 'Vaani', to: 'Vaani' },
+      { from: 'BTW', to: 'by the way' }
+    ]
+  });
+
+  assert.equal(changed, true);
+  assert.equal(patch.dictionaryEntries.every((entry) => entry.id), true);
+  assert.equal(new Set(patch.dictionaryEntries.map((entry) => entry.id)).size, 2);
+});
+
 test('stars prioritize spelling hints without changing deterministic rules', () => {
   const settings = dictionarySettingsPatch([
     { from: 'vani', to: 'Vaani' },

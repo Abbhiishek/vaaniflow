@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { dictionarySettingsPatch, migrateLegacyDictionary } = require('./dictionary');
+const { migrateSnippets, snippetSettingsPatch } = require('./snippets');
 
 const SETTINGS_SCHEMA_VERSION = 1;
 
@@ -152,12 +153,17 @@ const SETTINGS_DEFAULTS = {
   autoStopSec: 8, // end hands-free after this much silence (0 = never)
   polishEnabled: true,
   polishTimeoutSec: 8, // polish deadline; on timeout the raw transcript is pasted
+  personalStyle: 'casual', // WhatsApp, Telegram, Instagram, Messenger, Signal
+  workStyle: 'casual', // Slack, Teams, LinkedIn, and other workplace messengers
+  emailStyle: 'formal', // Gmail, Outlook, and desktop mail apps
+  otherStyle: 'formal', // notes, AI assistants, code editors, documents, and unknown apps
+  cleanupLevel: 'light', // none = verbatim, light = fillers/grammar, medium = clarity/conciseness
   defaultTone: 'neutral',
   autoTone: true, // auto-adapt tone to the target app (email/chat/AI prompt/code/docs)
   appProfiles: [], // [{ match, tone }] — tone override when foreground app matches
-  snippets: [], // [{ trigger, text }] — say the trigger, get the text
-  styleInstructions: '', // free-text writing style for the polish stage
-  windowTransparency: 0, // 0–70% acrylic see-through on the dashboard (0 = solid)
+  snippetSchemaVersion: 0,
+  snippets: [], // [{ id, trigger, text, createdAt, updatedAt }] — local text expansions
+  windowTransparency: 0, // 0–100% acrylic see-through on the dashboard (0 = solid)
   accentColor: '#e8e9eb', // primary color for buttons, toggles, charts, heatmap
   autoLearnVocabulary: true, // auto-import repeated proper nouns/acronyms
   dictionarySuggestions: {}, // internal candidate counts kept for auto-learning
@@ -210,6 +216,11 @@ class Store {
       Object.assign(this.settingsFile.data, dictionaryMigration.patch);
       migrated = true;
     }
+    const snippetMigration = migrateSnippets(this.settingsFile.data);
+    if (snippetMigration.changed) {
+      Object.assign(this.settingsFile.data, snippetMigration.patch);
+      migrated = true;
+    }
     if (previousSchemaVersion < SETTINGS_SCHEMA_VERSION) {
       this.settingsFile.data.settingsSchemaVersion = SETTINGS_SCHEMA_VERSION;
       migrated = true;
@@ -235,6 +246,9 @@ class Store {
     const nextPatch = patch && typeof patch === 'object' ? { ...patch } : {};
     if (Object.prototype.hasOwnProperty.call(nextPatch, 'dictionaryEntries')) {
       Object.assign(nextPatch, dictionarySettingsPatch(nextPatch.dictionaryEntries));
+    }
+    if (Object.prototype.hasOwnProperty.call(nextPatch, 'snippets')) {
+      Object.assign(nextPatch, snippetSettingsPatch(nextPatch.snippets));
     }
     Object.assign(this.settingsFile.data, nextPatch);
     if (flush) this.settingsFile.flush();

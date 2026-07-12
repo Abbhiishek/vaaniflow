@@ -629,6 +629,40 @@ document.addEventListener('keydown', async (event) => {
   await stopShortcutRecording(`Shortcut saved: ${label}`);
 });
 
+// ---------------- style profiles ----------------
+
+const STYLE_FIELDS = ['personalStyle', 'workStyle', 'emailStyle', 'otherStyle', 'cleanupLevel'];
+
+function syncStyleControls() {
+  for (const key of STYLE_FIELDS) {
+    const input = document.querySelector(`input[name="${key}"][value="${settings[key]}"]`)
+      || document.querySelector(`input[name="${key}"]`);
+    if (input) input.checked = true;
+  }
+}
+
+for (const key of STYLE_FIELDS) {
+  $$(`input[name="${key}"]`).forEach((input) => input.addEventListener('change', async () => {
+    if (!input.checked) return;
+    settings = await window.vaani.setSettings({ [key]: input.value });
+  }));
+}
+
+function showStylePanel(name) {
+  $$('.style-tab').forEach((tab) => {
+    const active = tab.dataset.styleTab === name;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
+  $$('.style-panel').forEach((panel) => {
+    const active = panel.dataset.stylePanel === name;
+    panel.classList.toggle('active', active);
+    panel.hidden = !active;
+  });
+}
+
+$$('.style-tab').forEach((tab) => tab.addEventListener('click', () => showStylePanel(tab.dataset.styleTab)));
+
 // ---------------- appearance (transparency + primary color) ----------------
 
 // Applies the theme instantly from current control values; the acrylic window
@@ -673,11 +707,10 @@ $$('.color-swatches button').forEach((button) => button.addEventListener('click'
 let dictionaryEntries = [];
 let editingDictionaryId = null;
 let pendingDictionaryDeleteId = null;
+const dictionaryModel = window.VaaniDictionaryModel;
 
 function syncDictionaryEntries() {
-  dictionaryEntries = (Array.isArray(settings.dictionaryEntries) ? settings.dictionaryEntries : [])
-    .filter((entry) => entry && entry.from)
-    .map((entry) => ({ ...entry, to: String(entry.to ?? entry.from) }));
+  dictionaryEntries = dictionaryModel.ensureEntries(settings.dictionaryEntries);
 }
 
 function dictionaryAction(label, path, onClick, className = '') {
@@ -777,7 +810,7 @@ function showDictionaryError(message) {
 }
 
 function openDictionaryEditor(entry = null, seed = null) {
-  editingDictionaryId = entry?.id || null;
+  editingDictionaryId = entry?.id ?? null;
   $('#dict-editor-title').textContent = entry ? 'Edit entry' : 'Add an entry';
   const from = entry ? (entry.from === entry.to ? '' : entry.from) : (seed?.from || '');
   const to = entry ? entry.to : (seed?.to || '');
@@ -803,15 +836,14 @@ async function saveDictionaryEntries(nextEntries, message) {
 }
 
 async function toggleDictionaryStar(id) {
-  const next = dictionaryEntries.map((entry) => entry.id === id
-    ? { ...entry, starred: !entry.starred }
-    : entry);
+  if (!id) return;
+  const next = dictionaryModel.toggleStar(dictionaryEntries, id);
   const starred = next.find((entry) => entry.id === id)?.starred;
   await saveDictionaryEntries(next, starred ? 'Entry prioritized' : 'Priority removed');
 }
 
 function openDictionaryDelete(entry) {
-  pendingDictionaryDeleteId = entry.id;
+  pendingDictionaryDeleteId = entry.id || null;
   const label = entry.from === entry.to ? entry.to : `${entry.from} → ${entry.to}`;
   $('#dict-delete-copy').textContent = `“${label}” will be removed permanently.`;
   $('#dict-delete-backdrop').hidden = false;
@@ -828,8 +860,7 @@ $('#dict-editor').addEventListener('submit', async (event) => {
   const to = $('#dict-to').value.replace(/\s+/g, ' ').trim();
   const from = $('#dict-from').value.replace(/\s+/g, ' ').trim() || to;
   if (!to) return showDictionaryError('Enter how Vaani should write this term.');
-  const duplicate = dictionaryEntries.find((entry) => entry.id !== editingDictionaryId
-    && entry.from.toLocaleLowerCase() === from.toLocaleLowerCase());
+  const duplicate = dictionaryModel.findDuplicate(dictionaryEntries, from, editingDictionaryId);
   if (duplicate) return showDictionaryError(`“${from}” is already in your dictionary.`);
 
   const existing = dictionaryEntries.find((entry) => entry.id === editingDictionaryId);
@@ -842,7 +873,7 @@ $('#dict-editor').addEventListener('submit', async (event) => {
     createdAt: existing?.createdAt || Date.now()
   };
   const next = existing
-    ? dictionaryEntries.map((entry) => entry.id === existing.id ? value : entry)
+    ? dictionaryModel.updateEntry(dictionaryEntries, existing.id, value)
     : [...dictionaryEntries, value];
   await saveDictionaryEntries(next, existing ? 'Dictionary entry updated' : 'Added to your dictionary');
   closeDictionaryEditor();
@@ -862,8 +893,8 @@ $('#dict-editor-cancel').addEventListener('click', closeDictionaryEditor);
 $('#dict-delete-close').addEventListener('click', closeDictionaryDelete);
 $('#dict-delete-cancel').addEventListener('click', closeDictionaryDelete);
 $('#dict-delete-confirm').addEventListener('click', async () => {
-  if (!pendingDictionaryDeleteId) return;
-  const next = dictionaryEntries.filter((entry) => entry.id !== pendingDictionaryDeleteId);
+  if (pendingDictionaryDeleteId === null) return;
+  const next = dictionaryModel.removeEntry(dictionaryEntries, pendingDictionaryDeleteId);
   await saveDictionaryEntries(next, 'Dictionary entry deleted');
   closeDictionaryDelete();
 });
@@ -898,90 +929,241 @@ window.vaani.onSettingsChanged(async () => {
   syncHomeShortcut();
   syncProfileSummary();
   syncDictionaryEntries();
+  syncSnippets();
   renderDictionary();
+  renderSnippets();
 });
 
-// ---------------- list editors (tone profiles / snippets) ----------------
+// ---------------- snippets ----------------
 
-let appProfiles = [];
 let snippets = [];
+let editingSnippetId = null;
+let pendingSnippetDeleteId = null;
+const SNIPPET_MODEL = window.VaaniSnippetModel;
 
-function deleteButton(onClick) {
-  const del = document.createElement('button');
-  del.className = 'icon-btn delete';
-  del.innerHTML = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>';
-  del.addEventListener('click', onClick);
-  return del;
+function syncSnippets() {
+  snippets = SNIPPET_MODEL.ensureEntries(settings.snippets);
+  settings.snippets = snippets;
 }
 
-function renderAppProfiles() {
-  const list = $('#profile-list');
-  list.innerHTML = '';
-  appProfiles.forEach((p, i) => {
-    const row = document.createElement('div');
-    row.className = 'repl-row';
-    const match = document.createElement('span');
-    match.className = 'repl-text';
-    match.textContent = p.match;
-    const arrow = document.createElement('span');
-    arrow.className = 'repl-arrow';
-    arrow.textContent = '→';
-    const tone = document.createElement('span');
-    tone.className = 'repl-text';
-    tone.textContent = p.tone;
-    row.append(match, arrow, tone, deleteButton(async () => {
-      appProfiles.splice(i, 1);
-      settings = await window.vaani.setSettings({ appProfiles });
-      renderAppProfiles();
-    }));
-    list.appendChild(row);
+function snippetAction(label, path, onClick, className = '') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `snippet-action ${className}`.trim();
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.innerHTML = `<svg viewBox="0 0 24 24"><path fill="currentColor" d="${path}"/></svg>`;
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onClick();
   });
+  return button;
 }
 
-$('#profile-add-btn').addEventListener('click', async () => {
-  const matchEl = $('#profile-match');
-  const match = matchEl.value.trim();
-  if (!match) return;
-  appProfiles.push({ match, tone: $('#profile-tone').value });
-  settings = await window.vaani.setSettings({ appProfiles });
-  matchEl.value = '';
-  renderAppProfiles();
-});
+function snippetPreview(value, limit = 360) {
+  const text = String(value || '');
+  return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
+}
 
 function renderSnippets() {
   const list = $('#snippet-list');
+  const empty = $('#snippet-empty');
+  const query = $('#snippet-search').value.trim().toLocaleLowerCase();
+  const sort = $('#snippet-sort').value;
+  const filtered = snippets.filter((snippet) => {
+    if (!query) return true;
+    return `${snippet.trigger} ${snippet.text}`.toLocaleLowerCase().includes(query);
+  });
+  filtered.sort((a, b) => sort === 'alpha'
+    ? a.trigger.localeCompare(b.trigger)
+    : Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0));
+
+  const count = snippets.length;
+  $('#snippet-count').textContent = query
+    ? `${filtered.length} of ${count}`
+    : `${count} ${count === 1 ? 'snippet' : 'snippets'}`;
   list.innerHTML = '';
-  snippets.forEach((sn, i) => {
+  empty.hidden = filtered.length > 0;
+
+  if (!filtered.length) {
+    const searching = !!query && count > 0;
+    $('#snippet-empty-title').textContent = searching ? 'No matching snippets' : 'Your shortcuts will live here';
+    $('#snippet-empty-copy').textContent = searching
+      ? 'Try another phrase or clear the search.'
+      : 'Add a phrase you say often and the exact text it should become.';
+    $('#snippet-empty-add').textContent = searching ? 'Clear search' : 'Add your first snippet';
+    return;
+  }
+
+  filtered.forEach((snippet, index) => {
     const row = document.createElement('div');
-    row.className = 'repl-row';
-    const body = document.createElement('div');
-    body.className = 'repl-text';
+    row.className = 'snippet-entry';
+    row.style.setProperty('--snippet-delay', `${Math.min(index, 8) * 24}ms`);
+    row.tabIndex = 0;
+    row.addEventListener('dblclick', () => openSnippetEditor(snippet));
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') openSnippetEditor(snippet);
+    });
+
     const trigger = document.createElement('div');
-    trigger.textContent = `“${sn.trigger}”`;
-    const preview = document.createElement('div');
-    preview.className = 'snippet-body';
-    preview.textContent = sn.text.length > 160 ? sn.text.slice(0, 160) + '…' : sn.text;
-    body.append(trigger, preview);
-    row.append(body, deleteButton(async () => {
-      snippets.splice(i, 1);
-      settings = await window.vaani.setSettings({ snippets });
-      renderSnippets();
-    }));
+    trigger.className = 'snippet-trigger-block';
+    const triggerLabel = document.createElement('span');
+    triggerLabel.textContent = 'When I say';
+    const triggerValue = document.createElement('strong');
+    triggerValue.textContent = `“${snippet.trigger}”`;
+    trigger.append(triggerLabel, triggerValue);
+
+    const arrow = document.createElement('div');
+    arrow.className = 'snippet-entry-arrow';
+    arrow.innerHTML = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="m13.2 5.8-1.4 1.4 3.8 3.8H5v2h10.6l-3.8 3.8 1.4 1.4L19.4 12z"/></svg>';
+
+    const expansion = document.createElement('div');
+    expansion.className = 'snippet-expansion-block';
+    const expansionLabel = document.createElement('div');
+    expansionLabel.className = 'snippet-expansion-label';
+    const label = document.createElement('span');
+    label.textContent = 'Insert';
+    const badge = document.createElement('small');
+    badge.textContent = snippet.starter ? 'Starter' : 'Personal';
+    expansionLabel.append(label, badge);
+    const value = document.createElement('div');
+    value.className = 'snippet-expansion-text';
+    value.textContent = snippetPreview(snippet.text);
+    expansion.append(expansionLabel, value);
+
+    const actions = document.createElement('div');
+    actions.className = 'snippet-actions';
+    actions.append(
+      snippetAction('Edit snippet', 'M3 17.3V21h3.7L17.8 9.9l-3.7-3.7L3 17.3zm17.7-10.2a1 1 0 0 0 0-1.4l-2.4-2.4a1 1 0 0 0-1.4 0L15 5.2l3.7 3.7 2-1.8z', () => openSnippetEditor(snippet)),
+      snippetAction('Delete snippet', 'M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zm3.5-9h1.5v7H9.5v-7zm3.5 0h1.5v7H13v-7zM15.5 4l-1-1h-5l-1 1H5v2h14V4h-3.5z', () => openSnippetDelete(snippet), 'delete')
+    );
+    row.append(trigger, arrow, expansion, actions);
     list.appendChild(row);
   });
 }
 
-$('#snippet-add-btn').addEventListener('click', async () => {
-  const trigEl = $('#snippet-trigger');
-  const textEl = $('#snippet-text');
-  const trigger = trigEl.value.trim();
-  const text = textEl.value;
-  if (!trigger || !text.trim()) return;
-  snippets.push({ trigger, text });
-  settings = await window.vaani.setSettings({ snippets });
-  trigEl.value = '';
-  textEl.value = '';
+function showSnippetError(message) {
+  const error = $('#snippet-editor-error');
+  error.textContent = message;
+  error.hidden = !message;
+}
+
+function updateSnippetEditorHints() {
+  const trigger = $('#snippet-trigger').value.replace(/\s+/g, ' ').trim();
+  $('#snippet-spoken-preview').textContent = trigger
+    ? `Say “${trigger}” by itself, or use it naturally inside a sentence.`
+    : 'Try a short phrase you would not say accidentally.';
+  $('#snippet-char-count').textContent = `${$('#snippet-text').value.length.toLocaleString()} / 12,000`;
+}
+
+function openSnippetEditor(snippet = null, seed = null) {
+  editingSnippetId = snippet?.id || null;
+  $('#snippet-editor-title').textContent = snippet ? 'Edit snippet' : 'Add snippet';
+  $('#snippet-editor-save').textContent = snippet ? 'Save changes' : 'Add snippet';
+  $('#snippet-trigger').value = snippet?.trigger || seed?.trigger || '';
+  $('#snippet-text').value = snippet?.text || seed?.text || '';
+  showSnippetError('');
+  updateSnippetEditorHints();
+  $('#snippet-editor-backdrop').hidden = false;
+  requestAnimationFrame(() => $('#snippet-trigger').focus());
+}
+
+function closeSnippetEditor() {
+  editingSnippetId = null;
+  $('#snippet-editor-backdrop').hidden = true;
+  showSnippetError('');
+}
+
+async function saveSnippets(next, message) {
+  settings = await window.vaani.setSettings({ snippets: next });
+  syncSnippets();
   renderSnippets();
+  if (message) toast(message);
+}
+
+function openSnippetDelete(snippet) {
+  pendingSnippetDeleteId = snippet.id;
+  const expansion = snippetPreview(snippet.text.replace(/\s+/g, ' '), 120);
+  $('#snippet-delete-copy').textContent = `“${snippet.trigger}” → “${expansion}” will be deleted permanently.`;
+  $('#snippet-delete-backdrop').hidden = false;
+  requestAnimationFrame(() => $('#snippet-delete-confirm').focus());
+}
+
+function closeSnippetDelete() {
+  pendingSnippetDeleteId = null;
+  $('#snippet-delete-backdrop').hidden = true;
+}
+
+$('#snippet-editor').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const trigger = $('#snippet-trigger').value
+    .replace(/^[\s“”"']+|[\s“”"']+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const text = $('#snippet-text').value.trim();
+  if (!trigger) return showSnippetError('Enter the phrase you want to say.');
+  if (!text) return showSnippetError('Enter the text Vaani should insert.');
+  const duplicate = snippets.find((snippet) => snippet.id !== editingSnippetId
+    && snippet.trigger.toLocaleLowerCase() === trigger.toLocaleLowerCase());
+  if (duplicate) return showSnippetError(`“${trigger}” is already used by another snippet.`);
+
+  const existing = snippets.find((snippet) => snippet.id === editingSnippetId);
+  const value = {
+    ...(existing || {}),
+    id: existing?.id || SNIPPET_MODEL.createId(),
+    trigger,
+    text,
+    starter: false,
+    createdAt: existing?.createdAt || Date.now(),
+    updatedAt: Date.now()
+  };
+  const next = existing
+    ? SNIPPET_MODEL.updateEntry(snippets, existing.id, value)
+    : [...snippets, value];
+  await saveSnippets(next, existing ? 'Snippet updated' : 'Snippet added');
+  closeSnippetEditor();
+});
+
+$('#snippet-add-btn').addEventListener('click', () => openSnippetEditor());
+$('#snippet-empty-add').addEventListener('click', () => {
+  if ($('#snippet-search').value) {
+    $('#snippet-search').value = '';
+    renderSnippets();
+  } else openSnippetEditor();
+});
+$('#snippet-search').addEventListener('input', renderSnippets);
+$('#snippet-sort').addEventListener('change', renderSnippets);
+$('#snippet-trigger').addEventListener('input', updateSnippetEditorHints);
+$('#snippet-text').addEventListener('input', updateSnippetEditorHints);
+$('#snippet-editor-close').addEventListener('click', closeSnippetEditor);
+$('#snippet-editor-cancel').addEventListener('click', closeSnippetEditor);
+$('#snippet-delete-close').addEventListener('click', closeSnippetDelete);
+$('#snippet-delete-cancel').addEventListener('click', closeSnippetDelete);
+$('#snippet-delete-confirm').addEventListener('click', async () => {
+  if (!pendingSnippetDeleteId) return;
+  await saveSnippets(SNIPPET_MODEL.removeEntry(snippets, pendingSnippetDeleteId), 'Snippet deleted');
+  closeSnippetDelete();
+});
+
+$$('.snippet-example').forEach((button) => button.addEventListener('click', () => {
+  openSnippetEditor(null, {
+    trigger: button.dataset.trigger,
+    text: button.dataset.text.replace(/\\n/g, '\n')
+  });
+}));
+
+for (const backdrop of [$('#snippet-editor-backdrop'), $('#snippet-delete-backdrop')]) {
+  backdrop.addEventListener('mousedown', (event) => {
+    if (event.target !== backdrop) return;
+    if (backdrop === $('#snippet-editor-backdrop')) closeSnippetEditor();
+    else closeSnippetDelete();
+  });
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!$('#snippet-delete-backdrop').hidden) closeSnippetDelete();
+  else if (!$('#snippet-editor-backdrop').hidden) closeSnippetEditor();
 });
 
 // ---------------- provider config + connection test ----------------
@@ -1308,16 +1490,15 @@ if (navigator.mediaDevices?.addEventListener) {
     $('#set-milestoneNotifications').closest('.setting-row').querySelector('small').textContent = 'Desktop notifications are unavailable on this system.';
   }
   document.documentElement.lang = settings.appLanguage || 'en';
+  syncStyleControls();
   applyAppearance();
   await refreshConfigInfo();
   await loadProviderConfig();
   populateAccountForm();
 
   syncDictionaryEntries();
-  appProfiles = Array.isArray(settings.appProfiles) ? settings.appProfiles : [];
-  snippets = Array.isArray(settings.snippets) ? settings.snippets : [];
+  syncSnippets();
   renderDictionary();
-  renderAppProfiles();
   renderSnippets();
 
   $('#hotkey-fallback').hidden = uiohookAvailable;

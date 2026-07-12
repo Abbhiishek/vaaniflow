@@ -15,8 +15,7 @@
     "smoke": "electron . --smoke",
     "test": "node --test",
     "verify:release": "node scripts/verify-release.js",
-    "icons": "node scripts/gen-icons.js",
-    "dist": "npm run icons && electron-builder --win --publish never"
+    "dist": "electron-builder --win --publish never"
   },
   "build": {
     "appId": "com.vaani.flow",

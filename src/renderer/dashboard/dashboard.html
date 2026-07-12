@@ -13,11 +13,11 @@
     <nav id="sidebar">
       <div id="logo">
         <div id="logo-mark">
-          <svg viewBox="0 0 24 24" width="18" height="18">
-            <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
-          </svg>
+          <img src="../../../assets/vaani.png" alt="" />
         </div>
-        <span>Vaani</span>
+        <div class="logo-copy">
+          <span class="logo-wordmark">Vaani</span>
+        </div>
       </div>
 
       <button class="nav-item active" data-view="home">
@@ -251,63 +251,200 @@
       <!-- ============ STYLE ============ -->
       <section id="view-style" class="view">
         <h1>Style</h1>
-        <p class="subtitle">How the AI writes your speech — needs a chat model set in Settings → AI polish.</p>
+        <p class="subtitle">App matching is automatic. Style formatting currently applies to English and uses the AI polish model configured in Settings.</p>
 
-        <div class="settings-group">
-          <h2>Writing style</h2>
-          <label class="toggle"><input id="set-autoTone" type="checkbox" /><span></span>Adapt tone to the app automatically</label>
-          <p class="group-hint">Detects where the text will land and writes accordingly: email apps get professional prose, chat apps get relaxed messages, AI assistants get precise prompts, code editors and terminals keep technical terms exact, and document apps get polished writing. Your per-app rules below always win.</p>
-          <label>Default tone (when no app matches)
-            <select id="set-defaultTone">
-              <option value="neutral">Neutral</option>
-              <option value="casual">Casual</option>
-              <option value="formal">Formal</option>
-              <option value="technical">Technical</option>
-              <option value="chat">Chat message</option>
-              <option value="email">Email</option>
-              <option value="prompt">AI prompt</option>
-            </select>
-          </label>
-          <label>Style instructions
-            <textarea id="set-styleInstructions" rows="5" placeholder="e.g. Short sentences. No emoji. Prefer active voice. Write numbers as digits. Keep my slang."></textarea>
-          </label>
-          <p class="group-hint">Free-form guidance given to the AI on every dictation.</p>
+        <div class="style-tabs" role="tablist" aria-label="Style category">
+          <button class="style-tab active" type="button" role="tab" aria-selected="true" data-style-tab="personal">Personal messages</button>
+          <button class="style-tab" type="button" role="tab" aria-selected="false" data-style-tab="work">Work messages</button>
+          <button class="style-tab" type="button" role="tab" aria-selected="false" data-style-tab="email">Email</button>
+          <button class="style-tab" type="button" role="tab" aria-selected="false" data-style-tab="other">Other</button>
+          <button class="style-tab" type="button" role="tab" aria-selected="false" data-style-tab="cleanup">Auto Cleanup <span class="beta-pill">Beta</span></button>
         </div>
 
-        <div class="settings-group">
-          <h2>Tone per app</h2>
-          <p class="group-hint">Override the tone based on the app you're dictating into. First match wins, including over automatic adaptation.</p>
-          <div id="profile-list"></div>
-          <div class="row repl-add">
-            <input id="profile-match" type="text" placeholder="app or window title contains… e.g. slack" spellcheck="false" />
-            <select id="profile-tone" class="compact">
-              <option value="casual">Casual</option>
-              <option value="formal">Formal</option>
-              <option value="technical">Technical</option>
-              <option value="neutral">Neutral</option>
-              <option value="chat">Chat message</option>
-              <option value="email">Email</option>
-              <option value="prompt">AI prompt</option>
-            </select>
-            <button id="profile-add-btn" class="primary-btn">Add</button>
+        <div class="style-panel active" role="tabpanel" data-style-panel="personal">
+          <div class="style-hero personal">
+            <div><span class="style-eyebrow">Personal messengers</span><h2>This style follows you into everyday conversations</h2><p>WhatsApp, Telegram, Instagram, Messenger, Signal, and similar apps.</p></div>
+            <div class="app-orbit" aria-label="WhatsApp, Telegram, Instagram, and more">
+              <span title="WhatsApp"><img src="../../../assets/style-icons/whatsapp.svg" alt="WhatsApp" /></span>
+              <span title="Telegram"><img src="../../../assets/style-icons/telegram.svg" alt="Telegram" /></span>
+              <span title="Instagram"><img src="../../../assets/style-icons/instagram.svg" alt="Instagram" /></span>
+              <span class="app-orbit-more" aria-hidden="true">+</span>
+            </div>
+          </div>
+          <div class="style-choice-grid">
+            <label class="style-choice"><input type="radio" name="personalStyle" value="formal" /><span class="style-choice-title">Formal<span>.</span></span><span class="style-choice-note">Caps + punctuation</span><span class="message-preview">Hey, are you free for lunch tomorrow? Let’s do 12 if that works for you.</span></label>
+            <label class="style-choice"><input type="radio" name="personalStyle" value="casual" /><span class="style-choice-title">Casual</span><span class="style-choice-note">Caps + less punctuation</span><span class="message-preview">Hey, are you free for lunch tomorrow? Let’s do 12 if that works for you</span></label>
+            <label class="style-choice"><input type="radio" name="personalStyle" value="very-casual" /><span class="style-choice-title">very casual</span><span class="style-choice-note">No caps + no punctuation</span><span class="message-preview">hey are you free for lunch tomorrow lets do 12 if that works for you</span></label>
           </div>
         </div>
+
+        <div class="style-panel" role="tabpanel" data-style-panel="work" hidden>
+          <div class="style-hero work">
+            <div><span class="style-eyebrow">Workplace messengers</span><h2>Clear updates without losing your voice</h2><p>Slack, Microsoft Teams, LinkedIn, Google Chat, and similar apps.</p></div>
+            <div class="app-orbit" aria-label="Slack, Microsoft Teams, LinkedIn, and more">
+              <span title="Slack"><img src="../../../assets/style-icons/slack.svg" alt="Slack" /></span>
+              <span title="Microsoft Teams"><img src="../../../assets/style-icons/microsoft-teams.svg" alt="Microsoft Teams" /></span>
+              <span title="LinkedIn"><img src="../../../assets/style-icons/linkedin.svg" alt="LinkedIn" /></span>
+              <span class="app-orbit-more" aria-hidden="true">+</span>
+            </div>
+          </div>
+          <div class="style-choice-grid">
+            <label class="style-choice"><input type="radio" name="workStyle" value="formal" /><span class="style-choice-title">Formal<span>.</span></span><span class="style-choice-note">Caps + punctuation</span><span class="work-preview"><b>John Doe</b><small>9:45 AM</small>Hey, if you’re free, let’s chat about the great results.</span></label>
+            <label class="style-choice"><input type="radio" name="workStyle" value="casual" /><span class="style-choice-title">Casual</span><span class="style-choice-note">Caps + less punctuation</span><span class="work-preview"><b>John Doe</b><small>9:45 AM</small>Hey, if you’re free, let’s chat about the great results</span></label>
+            <label class="style-choice"><input type="radio" name="workStyle" value="excited" /><span class="style-choice-title">Excited<span>!</span></span><span class="style-choice-note">More exclamations</span><span class="work-preview"><b>John Doe</b><small>9:45 AM</small>Hey, if you’re free, let’s chat about the great results!</span></label>
+          </div>
+        </div>
+
+        <div class="style-panel" role="tabpanel" data-style-panel="email" hidden>
+          <div class="style-hero email">
+            <div><span class="style-eyebrow">Email apps</span><h2>Write naturally in every inbox</h2><p>Gmail, Outlook, Thunderbird, Proton Mail, and other mail apps.</p></div>
+            <div class="app-orbit" aria-label="Gmail, Microsoft Outlook, Proton Mail, and more">
+              <span title="Gmail"><img src="../../../assets/style-icons/gmail.svg" alt="Gmail" /></span>
+              <span title="Microsoft Outlook"><img src="../../../assets/style-icons/microsoft-outlook.svg" alt="Microsoft Outlook" /></span>
+              <span title="Proton Mail"><img src="../../../assets/style-icons/proton-mail.svg" alt="Proton Mail" /></span>
+              <span class="app-orbit-more" aria-hidden="true">+</span>
+            </div>
+          </div>
+          <div class="style-choice-grid">
+            <label class="style-choice"><input type="radio" name="emailStyle" value="formal" /><span class="style-choice-title">Formal<span>.</span></span><span class="style-choice-note">Caps + punctuation</span><span class="email-preview"><small>To: Alex Doe</small><i></i>Hi Alex,<br><br>It was great talking with you today. Looking forward to our next chat.<br><br>Best,<br>Mary</span></label>
+            <label class="style-choice"><input type="radio" name="emailStyle" value="casual" /><span class="style-choice-title">Casual</span><span class="style-choice-note">Caps + less punctuation</span><span class="email-preview"><small>To: Alex Doe</small><i></i>Hi Alex, it was great talking with you today. Looking forward to our next chat.<br><br>Best,<br>Mary</span></label>
+            <label class="style-choice"><input type="radio" name="emailStyle" value="excited" /><span class="style-choice-title">Excited<span>!</span></span><span class="style-choice-note">More exclamations</span><span class="email-preview"><small>To: Alex Doe</small><i></i>Hi Alex,<br><br>It was great talking with you today. Looking forward to our next chat!<br><br>Best,<br>Mary</span></label>
+          </div>
+        </div>
+
+        <div class="style-panel" role="tabpanel" data-style-panel="other" hidden>
+          <div class="style-hero other">
+            <div><span class="style-eyebrow">Everything else</span><h2>A dependable default for the rest of your desktop</h2><p>Notes, ChatGPT, Codex, documents, code editors, terminals, and unknown apps.</p></div>
+            <div class="app-orbit" aria-label="OpenAI, Visual Studio Code, Notion, and more">
+              <span title="OpenAI"><img src="../../../assets/style-icons/openai.svg" alt="OpenAI" /></span>
+              <span title="Visual Studio Code"><img src="../../../assets/style-icons/visual-studio-code.svg" alt="Visual Studio Code" /></span>
+              <span title="Notion"><img src="../../../assets/style-icons/notion.svg" alt="Notion" /></span>
+              <span class="app-orbit-more" aria-hidden="true">+</span>
+            </div>
+          </div>
+          <div class="style-choice-grid">
+            <label class="style-choice"><input type="radio" name="otherStyle" value="formal" /><span class="style-choice-title">Formal<span>.</span></span><span class="style-choice-note">Caps + punctuation</span><span class="note-preview">So far, I am enjoying the new workout routine.<br><br>I am excited for tomorrow’s workout, especially after a full night of rest.</span></label>
+            <label class="style-choice"><input type="radio" name="otherStyle" value="casual" /><span class="style-choice-title">Casual</span><span class="style-choice-note">Caps + less punctuation</span><span class="note-preview">So far, I am enjoying the new workout routine<br><br>I am excited for tomorrow’s workout, especially after a full night of rest</span></label>
+            <label class="style-choice"><input type="radio" name="otherStyle" value="excited" /><span class="style-choice-title">Excited<span>!</span></span><span class="style-choice-note">More exclamations</span><span class="note-preview">So far, I am enjoying the new workout routine.<br><br>I am excited for tomorrow’s workout, especially after a full night of rest!</span></label>
+          </div>
+        </div>
+
+        <div class="style-panel" role="tabpanel" data-style-panel="cleanup" hidden>
+          <div class="style-hero cleanup">
+            <div><span class="style-eyebrow">All dictations</span><h2>Choose how much thinking-out-loud gets cleaned up</h2><p>This level is applied automatically in every app. Your original transcript remains in history when it changes.</p></div>
+            <div class="cleanup-mark" aria-hidden="true">Aa</div>
+          </div>
+          <div class="style-choice-grid cleanup-grid">
+            <label class="style-choice cleanup-choice"><input type="radio" name="cleanupLevel" value="none" /><span class="style-choice-title">None</span><span class="style-choice-note">Keeps fillers, repeats, and mistakes</span><span class="cleanup-preview">hey joey um we still on for coffee or I think we maybe should leave earlier to make it there in time there might um be traffic what are you thinking</span></label>
+            <label class="style-choice cleanup-choice"><input type="radio" name="cleanupLevel" value="light" /><span class="style-choice-title">Light</span><span class="style-choice-note">Cleans filler words and obvious grammar</span><span class="cleanup-preview">Hey Joey, are we still on for coffee? I think we should leave earlier to make it there in time. There might be traffic. What are you thinking?</span></label>
+            <label class="style-choice cleanup-choice"><input type="radio" name="cleanupLevel" value="medium" /><span class="style-choice-title">Medium</span><span class="style-choice-note">Edits for clarity and conciseness</span><span class="cleanup-preview">Hey Joey, are we still on for coffee? We should leave earlier; there might be traffic. What do you think?</span></label>
+          </div>
+        </div>
+
       </section>
 
       <!-- ============ SNIPPETS ============ -->
       <section id="view-snippets" class="view">
-        <h1>Snippets</h1>
-        <p class="subtitle">Say a trigger phrase (or "insert" + the phrase) as the whole dictation and the snippet text is inserted instead.</p>
+        <div class="snippets-heading">
+          <div>
+            <h1>Snippets</h1>
+            <p class="subtitle">Keep the things you repeat ready on cue.</p>
+          </div>
+          <button id="snippet-add-btn" class="primary-btn snippets-add-btn">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+            Add new
+          </button>
+        </div>
 
-        <div class="settings-group">
-          <div id="snippet-list"></div>
-          <div class="snippet-add">
-            <input id="snippet-trigger" type="text" placeholder="trigger phrase… e.g. my signature" spellcheck="false" />
-            <textarea id="snippet-text" rows="3" placeholder="text to insert"></textarea>
-            <button id="snippet-add-btn" class="primary-btn">Add snippet</button>
+        <div class="snippets-hero">
+          <div class="snippets-hero-copy">
+            <span class="snippets-kicker">Speak once. Reuse forever.</span>
+            <h2>The details you repeat,<br><em>ready when you say them.</em></h2>
+            <p>Save a phrase and its expansion. Say the phrase by itself or naturally inside a dictation; Vaani inserts the saved text exactly while polishing everything around it.</p>
+            <div class="snippets-benefits" aria-label="Snippet behavior">
+              <span>Works mid-sentence</span>
+              <span>Expansions stay verbatim</span>
+              <span>Stored only on this device</span>
+            </div>
+            <div class="snippet-quick-examples" aria-label="Create from an example">
+              <button type="button" class="snippet-example" data-trigger="my LinkedIn" data-text="https://www.linkedin.com/in/your-name">my LinkedIn</button>
+              <button type="button" class="snippet-example" data-trigger="my email address" data-text="you@example.com">my email address</button>
+              <button type="button" class="snippet-example" data-trigger="intro email" data-text="Hi,\n\nI’d love to find some time to chat. Please let me know what works for you.\n\nBest,">intro email</button>
+            </div>
+          </div>
+          <div class="snippet-demo" aria-hidden="true">
+            <div class="snippet-demo-status"><span></span>Live expansion</div>
+            <div class="snippet-demo-card spoken"><small>You say</small><strong>“my LinkedIn”</strong></div>
+            <div class="snippet-demo-route"><i></i><span>recognized</span><i></i></div>
+            <div class="snippet-demo-card expanded"><small>Vaani inserts</small><strong>linkedin.com/in/you</strong></div>
           </div>
         </div>
+
+        <div class="snippets-toolbar">
+          <label class="snippets-search">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="m20.7 19.3-4.2-4.2a7 7 0 1 0-1.4 1.4l4.2 4.2 1.4-1.4zM5 11a6 6 0 1 1 12 0 6 6 0 0 1-12 0z"/></svg>
+            <input id="snippet-search" type="search" placeholder="Search snippets" autocomplete="off" />
+          </label>
+          <span id="snippet-count" class="snippets-count">0 snippets</span>
+          <select id="snippet-sort" class="snippets-sort" aria-label="Sort snippets">
+            <option value="recent">Recently updated</option>
+            <option value="alpha">A–Z</option>
+          </select>
+        </div>
+
+        <div id="snippet-list" class="snippet-list"></div>
+        <div id="snippet-empty" class="snippet-empty" hidden>
+          <div class="snippet-empty-mark">→</div>
+          <h2 id="snippet-empty-title">Your shortcuts will live here</h2>
+          <p id="snippet-empty-copy">Add a phrase you say often and the exact text it should become.</p>
+          <button id="snippet-empty-add" class="secondary-btn">Add your first snippet</button>
+        </div>
       </section>
+
+      <div id="snippet-editor-backdrop" class="modal-backdrop" hidden>
+        <form id="snippet-editor" class="modal-card snippet-modal" role="dialog" aria-modal="true" aria-labelledby="snippet-editor-title">
+          <div class="modal-header">
+            <div>
+              <span class="modal-kicker">Personal snippet</span>
+              <h2 id="snippet-editor-title">Add snippet</h2>
+            </div>
+            <button id="snippet-editor-close" class="modal-close" type="button" aria-label="Close">×</button>
+          </div>
+          <p class="modal-copy">Choose a memorable spoken phrase, then add the exact text Vaani should insert.</p>
+          <label class="snippet-field">
+            <span>When I say</span>
+            <input id="snippet-trigger" type="text" maxlength="100" placeholder="my LinkedIn" spellcheck="false" autocomplete="off" required />
+            <small id="snippet-spoken-preview">Try a short phrase you would not say accidentally.</small>
+          </label>
+          <label class="snippet-field snippet-expansion-field">
+            <span>Insert this</span>
+            <textarea id="snippet-text" rows="8" maxlength="12000" placeholder="https://www.linkedin.com/in/your-name" required></textarea>
+            <small><span>URLs, prompts, signatures, and multi-line text are kept exactly as saved.</span><span id="snippet-char-count">0 / 12,000</span></small>
+          </label>
+          <p id="snippet-editor-error" class="form-error" hidden></p>
+          <div class="modal-actions">
+            <button id="snippet-editor-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button id="snippet-editor-save" class="primary-btn" type="submit">Add snippet</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="snippet-delete-backdrop" class="modal-backdrop" hidden>
+        <div class="modal-card confirm-modal" role="dialog" aria-modal="true" aria-labelledby="snippet-delete-title">
+          <div class="modal-header">
+            <div>
+              <span class="modal-kicker">Personal snippet</span>
+              <h2 id="snippet-delete-title">Delete this snippet?</h2>
+            </div>
+            <button id="snippet-delete-close" class="modal-close" type="button" aria-label="Close">×</button>
+          </div>
+          <p id="snippet-delete-copy" class="modal-copy">This snippet will be removed permanently.</p>
+          <div class="modal-actions">
+            <button id="snippet-delete-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button id="snippet-delete-confirm" class="danger-solid-btn" type="button">Yes, delete it</button>
+          </div>
+        </div>
+      </div>
 
       <!-- ============ SETTINGS ============ -->
       <section id="view-settings" class="view settings-shell" aria-label="Settings">
@@ -411,6 +548,8 @@
   </div>
 
   <div id="toast" hidden></div>
+  <script src="dictionary-model.js"></script>
+  <script src="snippet-model.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

@@ -1,6 +1,11 @@
 // Cleans raw Whisper output: artifacts, spoken commands, snippets, corrections.
 'use strict';
 const { preferredTerms } = require('./dictionary');
+const {
+  expandSnippets,
+  restoreSnippets,
+  snippetTokensPreserved
+} = require('./snippets');
 
 // non-speech annotations whisper.cpp likes to emit
 const NOISE_WORDS = /^(blank[_ ]?audio|music|upbeat music|applause|laugh(ter|s|ing)?|chuckles?|noise|silence|silent|inaudible|indistinct|cough(s|ing)?|clears? throat|sigh(s|ing)?|breath(es|ing)?|sniff(s|ing)?|sneezes?|beep(s|ing)?|static|typing|clicking|door .*|footsteps|birds? chirping|wind blowing|speaking foreign language|foreign language|no audio|no speech)$/i;
@@ -106,28 +111,16 @@ function applySpokenCommands(text) {
   return tidy(t);
 }
 
-// If the whole utterance is a snippet trigger ("my signature" / "insert my signature"),
-// return the snippet body instead of the transcript.
-function expandSnippets(text, snippets) {
-  const norm = tidy(text).toLowerCase().replace(/[.!?,]+$/, '').trim();
-  if (!norm) return { matched: false };
-  for (const sn of snippets || []) {
-    const trig = String(sn?.trigger || '').toLowerCase().trim();
-    if (!trig) continue;
-    if (norm === trig || norm === `insert ${trig}`) {
-      return { matched: true, text: String(sn.text || '') };
-    }
-  }
-  return { matched: false };
-}
-
 // Builds the Whisper `prompt` decoding hint: user vocabulary + trailing context
 // from the previous chunk (keeps chunked transcriptions coherent at boundaries).
 // Whisper keeps only the LAST ~224 tokens of the prompt, dropping the start —
 // cap the vocabulary so a large dictionary can't push itself (or the tail) out.
 function buildPrompt(dictionaryOrVocabulary, prevTail) {
-  const words = dictionaryOrVocabulary && typeof dictionaryOrVocabulary === 'object'
-    ? preferredTerms(dictionaryOrVocabulary)
+  const settings = dictionaryOrVocabulary && typeof dictionaryOrVocabulary === 'object'
+    ? dictionaryOrVocabulary
+    : null;
+  const words = settings
+    ? preferredTerms(settings)
     : String(dictionaryOrVocabulary || '').split(/[,\n]/).map((word) => word.trim()).filter(Boolean);
   const parts = [];
   if (words.length) {
@@ -141,6 +134,26 @@ function buildPrompt(dictionaryOrVocabulary, prevTail) {
     }
     if (kept.length) parts.push(`Preferred spelling: ${kept.join(', ')}.`);
   }
+  const snippetTriggers = (Array.isArray(settings?.snippets) ? settings.snippets : [])
+    .map((snippet) => String(snippet?.trigger || '').trim())
+    .filter(Boolean);
+  if (snippetTriggers.length) {
+    const kept = [];
+    let length = 0;
+    for (const trigger of snippetTriggers) {
+      const extra = trigger.length + (kept.length ? 2 : 0);
+      if (length + extra > 280) break;
+      kept.push(trigger);
+      length += extra;
+    }
+    if (kept.length) parts.push(`Saved snippet phrases: ${kept.join(', ')}.`);
+  }
+  // Whisper can omit filler words by default. A matching-style example nudges
+  // it toward verbatim output when Auto Cleanup is set to None; the polish
+  // stage separately validates that no words were removed or rearranged.
+  if (settings?.cleanupLevel === 'none') {
+    parts.push("Umm, let me think, like, hmm... okay, here's what I'm thinking.");
+  }
   if (prevTail) parts.push(String(prevTail).slice(-200));
   return parts.length ? parts.join(' ') : undefined;
 }
@@ -151,6 +164,8 @@ module.exports = {
   applyScratchThat,
   applySpokenCommands,
   expandSnippets,
+  restoreSnippets,
+  snippetTokensPreserved,
   buildPrompt,
   tidy
 };

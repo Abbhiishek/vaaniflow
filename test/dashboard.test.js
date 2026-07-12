@@ -14,6 +14,27 @@ test('dashboard JavaScript only references IDs present in the HTML', () => {
   assert.deepEqual(missing, []);
 });
 
+test('style app logos are bundled local SVG assets', () => {
+  const root = path.join(__dirname, '..');
+  const html = fs.readFileSync(path.join(root, 'src', 'renderer', 'dashboard', 'dashboard.html'), 'utf8');
+  const sources = [...html.matchAll(/<img src="([^"]*assets\/style-icons\/[^"?]+\.svg)"/g)]
+    .map((match) => match[1]);
+  assert.equal(sources.length, 12);
+  for (const source of sources) {
+    const file = path.resolve(root, 'src', 'renderer', 'dashboard', source);
+    assert.equal(fs.existsSync(file), true, `${source} should exist`);
+    assert.match(fs.readFileSync(file, 'utf8'), /^<svg\b/);
+  }
+});
+
+test('style page no longer exposes advanced guidance', () => {
+  const root = path.join(__dirname, '..', 'src', 'renderer', 'dashboard');
+  const html = fs.readFileSync(path.join(root, 'dashboard.html'), 'utf8');
+  const js = fs.readFileSync(path.join(root, 'dashboard.js'), 'utf8');
+  assert.doesNotMatch(html, /Advanced guidance|set-styleInstructions|style-advanced/);
+  assert.doesNotMatch(js, /styleInstructions|set-styleInstructions/);
+});
+
 test('settings uses standalone routed category pages including appearance', () => {
   const root = path.join(__dirname, '..', 'src', 'renderer', 'dashboard');
   const html = fs.readFileSync(path.join(root, 'dashboard.html'), 'utf8');
@@ -88,18 +109,29 @@ test('settings sidebar header contains only the Settings label', () => {
   assert.doesNotMatch(brand, /<svg|control room|microphone/i);
 });
 
-test('uses Vaani as the product name while retaining the vaaniflow repository identity', () => {
+test('sidebar uses the single Vaani brand image and wordmark', () => {
   const root = path.join(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'src', 'renderer', 'dashboard', 'dashboard.html'), 'utf8');
-  const js = fs.readFileSync(path.join(root, 'src', 'renderer', 'dashboard', 'dashboard.js'), 'utf8');
+  assert.match(html, /<img src="\.\.\/\.\.\/\.\.\/assets\/vaani\.png" alt="" \/>/);
+  assert.match(html, /<span class="logo-wordmark">Vaani<\/span>/);
+  assert.equal(fs.existsSync(path.join(root, 'assets', 'vaani.png')), true);
+});
+
+test('window, tray, and installer all use the same brand image', () => {
+  const root = path.join(__dirname, '..');
+  const main = fs.readFileSync(path.join(root, 'src', 'main', 'main.js'), 'utf8');
   const tray = fs.readFileSync(path.join(root, 'src', 'main', 'tray.js'), 'utf8');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.doesNotMatch(html, /VaaniFlow|Vaani Flow/);
-  assert.doesNotMatch(js, /VaaniFlow/);
-  assert.doesNotMatch(tray, /VaaniFlow/);
+  assert.match(main, /assets', 'vaani\.png'/);
+  assert.match(main, /icon: loadAppIcon\(32\)/);
+  assert.match(tray, /createTray\(\{ icon,/);
   assert.equal(pkg.name, 'vaaniflow');
   assert.equal(pkg.productName, 'Vaani');
   assert.equal(pkg.build.productName, 'Vaani');
+  assert.equal(pkg.build.appId, 'com.vaani.flow');
   assert.equal(pkg.build.win.icon, 'assets/vaani.png');
-  assert.equal(fs.existsSync(path.join(root, 'assets', 'vaani.png')), true);
+  assert.equal(pkg.build.nsis.guid, '8429a095-bee6-5aa8-8eb3-4fefd8b092a1');
+  assert.equal(fs.existsSync(path.join(root, 'assets', 'icon.png')), false);
+  assert.equal(fs.existsSync(path.join(root, 'assets', 'tray.png')), false);
+  assert.equal(fs.existsSync(path.join(root, 'assets', 'brand')), false);
 });
