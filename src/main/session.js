@@ -36,12 +36,15 @@ const INTRUDE_WINDOW_MS = 700; // other key right after combo-down = app shortcu
 const FAILED_AUDIO_KEEP = 6; // rescued WAVs kept on disk before pruning oldest
 
 class Session extends EventEmitter {
-  constructor({ store, injector, getOverlay, getRuntimeSettings }) {
+  constructor({ store, injector, getOverlay, getRuntimeSettings, systemAudio }) {
     super();
     this.store = store;
     this.injector = injector;
     this.getOverlay = getOverlay;
     this.getRuntimeSettings = getRuntimeSettings;
+    this.systemAudio = systemAudio || null;
+    this.audioMuteTimer = null;
+    this.audioMutedForSession = false;
     this.state = 'idle'; // idle | recording | processing
     this.mode = 'ptt'; // ptt | handsfree
     this.downAt = 0;
@@ -61,8 +64,13 @@ class Session extends EventEmitter {
   }
 
   _sendOverlay(payload) {
+    this.emit('ui-state', payload);
     const win = this.getOverlay();
     if (win && !win.isDestroyed()) win.webContents.send('session', payload);
+  }
+
+  uiState() {
+    return { state: this.state, mode: this.mode };
   }
 
   _notifyHistoryChanged() {
@@ -77,6 +85,33 @@ class Session extends EventEmitter {
     this.prevTail = '';
     this.sessionWavs = [];
     this.stoppedAt = 0;
+  }
+
+  _scheduleSystemAudioMute(settings) {
+    clearTimeout(this.audioMuteTimer);
+    this.audioMutedForSession = false;
+    if (!settings.muteMusicWhileDictating || !this.systemAudio?.available) return;
+    const generation = this.gen;
+    // Let the start cue play first, then mute the host output endpoint.
+    this.audioMuteTimer = setTimeout(async () => {
+      if (this.state !== 'recording') return;
+      const result = await this.systemAudio.mute();
+      if (result?.ok && (this.state !== 'recording' || generation !== this.gen)) {
+        await this.systemAudio.restore();
+        return;
+      }
+      this.audioMutedForSession = !!result?.ok;
+      if (!result?.ok) console.error('system audio mute:', result?.message || 'failed');
+    }, 140);
+  }
+
+  async _restoreSystemAudio() {
+    clearTimeout(this.audioMuteTimer);
+    this.audioMuteTimer = null;
+    if (!this.audioMutedForSession) return;
+    this.audioMutedForSession = false;
+    const result = await this.systemAudio.restore();
+    if (!result?.ok) console.error('system audio restore:', result?.message || 'failed');
   }
 
   // The user's speech must survive a dead server: dump this session's audio to
@@ -183,6 +218,7 @@ class Session extends EventEmitter {
       fastMode: settings.fastMode !== false,
       autoStopSec: Number(settings.autoStopSec) || 0
     });
+    this._scheduleSystemAudioMute(settings);
     clearTimeout(this.maxTimer);
     this.maxTimer = setTimeout(() => this.stop(), MAX_RECORD_MS);
   }
@@ -191,8 +227,11 @@ class Session extends EventEmitter {
     if (this.state !== 'recording') return;
     clearTimeout(this.maxTimer);
     this.state = 'processing';
-    this.stoppedAt = Date.now();
-    this._sendOverlay({ type: 'processing' });
+    this._restoreSystemAudio().finally(() => {
+      if (this.state !== 'processing') return;
+      this.stoppedAt = Date.now();
+      this._sendOverlay({ type: 'processing' });
+    });
     // overlay responds with onAudioData / onAudioError
   }
 
@@ -201,6 +240,7 @@ class Session extends EventEmitter {
     clearTimeout(this.maxTimer);
     this.state = 'idle';
     this.gen++; // discard any in-flight chunk results
+    this._restoreSystemAudio();
     this._sendOverlay({ type: 'cancel' });
   }
 
@@ -347,6 +387,7 @@ class Session extends EventEmitter {
     clearTimeout(this.maxTimer);
     this.state = 'idle';
     this.gen++;
+    this._restoreSystemAudio();
     this._sendOverlay({ type: 'error', message: message || 'Microphone error' });
   }
 }

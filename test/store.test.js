@@ -52,6 +52,37 @@ test('reloads config.json edits for each runtime settings request', (t) => {
   assert.equal(runtime.chatModel, 'gpt40');
 });
 
+test('updates provider configuration through the store', (t) => {
+  const dir = tempUserData(t);
+  const store = new Store(dir);
+  store.updateConfig({
+    baseUrl: 'https://provider.example.com',
+    apiKey: 'local-key',
+    whisperDeployment: 'speech-prod',
+    llmDeployment: 'language-prod'
+  });
+
+  assert.deepEqual(store.getConfig(), {
+    baseUrl: 'https://provider.example.com',
+    apiKey: 'local-key',
+    apiVersion: '2024-10-21',
+    whisperDeployment: 'speech-prod',
+    llmDeployment: 'language-prod'
+  });
+});
+
+test('provider updates can repair an invalid config file', (t) => {
+  const dir = tempUserData(t);
+  const store = new Store(dir);
+  fs.writeFileSync(path.join(dir, 'config.json'), '{ invalid json');
+  assert.doesNotThrow(() => store.updateConfig({
+    baseUrl: 'https://provider.example.com',
+    apiKey: 'local-key',
+    whisperDeployment: 'speech-prod'
+  }));
+  assert.equal(store.getConfig().whisperDeployment, 'speech-prod');
+});
+
 test('surfaces invalid config JSON without preventing Store construction', (t) => {
   const dir = tempUserData(t);
   const store = new Store(dir);
@@ -76,6 +107,30 @@ test('migrates the legacy vocabulary and corrections into dictionary entries', (
       { from: 'BTW', to: 'by the way' }
     ]
   );
+});
+
+test('saved account profile survives a full store restart', (t) => {
+  const dir = tempUserData(t);
+  const store = new Store(dir);
+  store.updateSettings({
+    profileFirstName: 'Abhishek',
+    profileLastName: 'Kushwaha',
+    profileEmail: 'abhishek@example.com',
+    profilePicture: 'data:image/jpeg;base64,local-profile'
+  }, { flush: true });
+
+  const restarted = new Store(dir);
+  assert.equal(restarted.settings.profileFirstName, 'Abhishek');
+  assert.equal(restarted.settings.profileLastName, 'Kushwaha');
+  assert.equal(restarted.settings.profileEmail, 'abhishek@example.com');
+  assert.equal(restarted.settings.profilePicture, 'data:image/jpeg;base64,local-profile');
+});
+
+test('custom shortcut survives a full store restart', (t) => {
+  const dir = tempUserData(t);
+  const store = new Store(dir);
+  store.updateSettings({ hotkey: 'custom:Alt+KeyV' }, { flush: true });
+  assert.equal(new Store(dir).settings.hotkey, 'custom:Alt+KeyV');
 });
 
 test('versions settings migrations and preserves a pre-migration backup', (t) => {

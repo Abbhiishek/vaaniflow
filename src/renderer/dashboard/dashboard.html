@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' https:" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' https: data:" />
   <title>Vaani</title>
   <link rel="stylesheet" href="dashboard.css" />
 </head>
@@ -47,6 +47,13 @@
           Start dictation
         </button>
         <div id="sidebar-divider"></div>
+        <button id="sidebar-profile" type="button" aria-label="Open account settings">
+          <span id="sidebar-profile-avatar" class="profile-avatar profile-avatar-small"><span>V</span></span>
+          <span class="sidebar-profile-copy">
+            <strong id="sidebar-profile-name">Your profile</strong>
+            <small>Stored on this device</small>
+          </span>
+        </button>
         <button class="nav-item" data-view="settings">
           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2.1-1.7a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.7 7.7 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.7 7.7 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.5 11a7.6 7.6 0 0 0 0 2l-2.1 1.7a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1a7.7 7.7 0 0 0 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6a7.7 7.7 0 0 0 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
           Settings
@@ -62,7 +69,15 @@
       <!-- ============ HOME: past generations ============ -->
       <section id="view-home" class="view active">
         <h1 id="greeting">Welcome back</h1>
-        <p class="subtitle" id="home-hint"></p>
+        <p class="subtitle" id="home-hint">Your voice is ready wherever you type.</p>
+        <div id="home-session" class="home-session ready" role="status" aria-live="polite">
+          <span class="home-session-signal" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="home-session-copy">
+            <strong id="home-session-label">Ready to dictate</strong>
+            <small id="home-session-detail">Hold your shortcut and speak.</small>
+          </span>
+          <kbd id="home-shortcut">—</kbd>
+        </div>
         <div class="row feed-tools">
           <input id="search" type="text" placeholder="Search transcripts…" />
           <button id="btn-clear-history" class="danger-btn">Clear all</button>
@@ -295,112 +310,100 @@
       </section>
 
       <!-- ============ SETTINGS ============ -->
-      <section id="view-settings" class="view">
-        <h1>Settings</h1>
-
-        <div class="settings-group">
-          <h2>Azure OpenAI</h2>
-          <p class="group-hint">Vaani reads the Azure endpoint, API key, Whisper deployment, and polish deployment from a local configuration file. The file is reloaded before each dictation.</p>
-          <span class="field-label">Configuration file</span>
-          <code id="config-path" class="config-path">Loading…</code>
-          <pre class="config-example">{
-  "baseUrl": "https://your-resource.openai.azure.com",
-  "apiKey": "your-api-key",
-  "apiVersion": "2024-10-21",
-  "whisperDeployment": "whisper",
-  "llmDeployment": "gpt40"
-}</pre>
-          <label>Language
-            <select id="set-language">
-              <option value="auto">Auto-detect</option>
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="ja">Japanese</option>
-              <option value="zh">Chinese</option>
-              <option value="pt">Portuguese</option>
-              <option value="ru">Russian</option>
-              <option value="ar">Arabic</option>
-            </select>
-          </label>
-          <div class="row">
-            <button id="btn-open-config" class="secondary-btn">Open config file</button>
-            <button id="btn-reload-config" class="secondary-btn">Reload</button>
-            <button id="btn-test" class="primary-btn">Test connection</button>
+      <section id="view-settings" class="view settings-shell" aria-label="Settings">
+        <aside class="settings-sidebar">
+          <button id="settings-back" class="settings-back" type="button">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="m14.7 6.3-1.4-1.4L6.2 12l7.1 7.1 1.4-1.4-4.7-4.7h8v-2h-8z"/></svg>
+            Back to Vaani
+          </button>
+          <div class="settings-brand">
+            <strong>Settings</strong>
           </div>
-          <span id="config-status"></span>
-          <span id="test-result"></span>
-        </div>
+          <nav class="settings-nav" aria-label="Settings categories">
+            <button type="button" class="settings-nav-item active" data-settings-category="general"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 6h10v2H4zm0 5h16v2H4zm0 5h7v2H4zm13-11h3v4h-3zm-4 10h3v4h-3z"/></svg><span><strong>General</strong><small>Input and language</small></span></button>
+            <button type="button" class="settings-nav-item" data-settings-category="system"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v11H4zm2 2v7h12V7zm3 11h6v2H9z"/></svg><span><strong>System</strong><small>Startup and sounds</small></span></button>
+            <button type="button" class="settings-nav-item" data-settings-category="appearance"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18c1.7 0 2.5-1 2.5-2 0-.5-.2-.9-.5-1.3-.2-.3-.1-.7.3-.8H16a5 5 0 0 0 5-5c0-5-4-9-9-9zM7.5 13A1.5 1.5 0 1 1 7.5 10a1.5 1.5 0 0 1 0 3zm2-5A1.5 1.5 0 1 1 9.5 5a1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm2 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg><span><strong>Appearance</strong><small>Window and color</small></span></button>
+            <button type="button" class="settings-nav-item" data-settings-category="provider"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.5 8 12 11.7 5.5 8zM5 9.7l6 3.4v6.3L5 16zm8 9.7v-6.3l6-3.4V16z"/></svg><span><strong>Provider</strong><small>Speech and AI access</small></span></button>
+            <button type="button" class="settings-nav-item" data-settings-category="account"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14z"/></svg><span><strong>Account</strong><small>Your local profile</small></span></button>
+          </nav>
+          <div class="settings-local-note"><span></span><div><strong>Private by default</strong><small>Preferences stay on this device.</small></div></div>
+          <button id="settings-profile-summary" class="settings-profile-summary" type="button">
+            <span id="settings-profile-avatar" class="profile-avatar"><span>V</span></span>
+            <span><strong id="settings-profile-name">Your profile</strong><small id="settings-profile-email">Add your details</small></span>
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="m9.3 6.3 1.4-1.4 7.1 7.1-7.1 7.1-1.4-1.4 5.7-5.7z"/></svg>
+          </button>
+        </aside>
 
-        <div class="settings-group">
-          <h2>AI polish</h2>
-          <p class="group-hint">Transcript cleanup uses <code>llmDeployment</code> from config.json on the same Azure endpoint and API key. Leave it empty to disable the LLM stage. If the deadline passes, the raw transcript is pasted instead.</p>
-          <div class="row">
-            <label>Polish deadline
-              <select id="set-polishTimeoutSec">
-                <option value="3">3 seconds</option>
-                <option value="5">5 seconds</option>
-                <option value="8">8 seconds</option>
-                <option value="15">15 seconds</option>
-                <option value="25">25 seconds</option>
-              </select>
-            </label>
+        <div class="settings-main">
+          <div class="settings-page active" data-settings-page="general">
+            <header class="settings-page-header"><span class="settings-eyebrow">Everyday controls</span><h1>General</h1><p>Choose how Vaani listens, responds, and speaks your language.</p></header>
+            <div class="settings-card settings-list-card">
+              <div class="setting-row shortcut-setting"><span class="setting-icon warm">⌘</span><span class="setting-copy"><strong>Shortcut</strong><small id="shortcut-help">Hold the shortcut and speak. Release to insert your words.</small><span id="hotkey-fallback" class="setting-warning" hidden>Native key hook unavailable; shortcuts work as hands-free toggles.</span></span><div class="setting-control-stack"><div class="setting-control-group"><select id="set-hotkey" class="setting-control" aria-label="Dictation shortcut"></select><button id="shortcut-record" class="setting-inline-button" type="button">Record</button></div><span id="shortcut-recording" class="shortcut-recording" hidden>Press a shortcut · Esc to cancel</span></div></div>
+              <div class="setting-row"><span class="setting-icon cool"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></span><span class="setting-copy"><strong>Default microphone</strong><small id="mic-status">Vaani will listen through this input device.</small></span><div class="setting-control-group"><select id="set-mic" class="setting-control" aria-label="Default microphone"><option value="default">System default</option></select><button id="mic-refresh" class="setting-icon-button" type="button" aria-label="Refresh microphones" title="Refresh microphones"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17.7 6.3A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.8-4.3L13 11h8V3z"/></svg></button></div></div>
+              <label class="setting-row" for="set-language"><span class="setting-icon green">Aa</span><span class="setting-copy"><strong>Dictation language</strong><small>Pick one language or let speech detection decide.</small></span><select id="set-language" class="setting-control" aria-label="Dictation language"><option value="auto">Auto-detect</option><option value="en">English</option><option value="hi">Hindi</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="ja">Japanese</option><option value="zh">Chinese</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="ar">Arabic</option></select></label>
+              <label class="setting-row" for="set-appLanguage"><span class="setting-icon violet">文</span><span class="setting-copy"><strong>App language</strong><small>Choose the language used across the Vaani interface.</small></span><select id="set-appLanguage" class="setting-control" aria-label="App language"><option value="en">English</option><option value="hi">हिन्दी</option></select></label>
+            </div>
+            <p class="settings-save-note" id="general-save-note" aria-live="polite">Changes save automatically on this device.</p>
           </div>
-          <label class="toggle"><input id="set-polishEnabled" type="checkbox" /><span></span>Polish transcripts</label>
-        </div>
 
-        <div class="settings-group">
-          <h2>Microphone</h2>
-          <label>Input device
-            <select id="set-mic"><option value="default">System default</option></select>
-          </label>
-        </div>
+          <div class="settings-page" data-settings-page="system" hidden>
+            <header class="settings-page-header"><span class="settings-eyebrow">Desktop behavior</span><h1>System</h1><p>Keep Vaani present when you need it and quiet when you do not.</p></header>
+            <section class="settings-section"><div class="settings-section-heading"><span>01</span><div><h2>App settings</h2><p>Startup and desktop visibility.</p></div></div><div class="settings-card settings-list-card compact">
+              <label class="setting-row toggle-row"><span class="setting-copy"><strong>Launch app at login</strong><small>Start Vaani when you sign in to this computer.</small></span><span class="settings-switch"><input id="set-launchAtLogin" type="checkbox" /><span></span></span></label>
+              <label class="setting-row toggle-row"><span class="setting-copy"><strong>Show flow bar at all times</strong><small>Keep the idle dictation bar visible above other apps.</small></span><span class="settings-switch"><input id="set-showFlowBar" type="checkbox" /><span></span></span></label>
+              <label class="setting-row toggle-row"><span class="setting-copy"><strong>Show app in dock</strong><small>Keep Vaani visible in the taskbar or Dock.</small></span><span class="settings-switch"><input id="set-showInDock" type="checkbox" /><span></span></span></label>
+            </div></section>
+            <section class="settings-section"><div class="settings-section-heading"><span>02</span><div><h2>Sound</h2><p>Audio feedback during dictation.</p></div></div><div class="settings-card settings-list-card compact">
+              <label class="setting-row toggle-row"><span class="setting-copy"><strong>Dictation and notification sounds</strong><small>Play a subtle cue when recording starts and stops.</small></span><span class="settings-switch"><input id="set-sounds" type="checkbox" /><span></span></span></label>
+              <label class="setting-row toggle-row"><span class="setting-copy"><strong>Mute music while dictating</strong><small>Reduce distractions from other audio while you speak.</small></span><span class="settings-switch"><input id="set-muteMusicWhileDictating" type="checkbox" /><span></span></span></label>
+            </div></section>
+            <section class="settings-section"><div class="settings-section-heading"><span>03</span><div><h2>Notifications</h2><p>Choose the progress updates you want to see.</p></div></div><div class="settings-card settings-list-card compact">
+              <label class="setting-row toggle-row"><span class="setting-copy"><strong>Milestones</strong><small>Celebrate word-count goals and dictation streaks.</small></span><span class="settings-switch"><input id="set-milestoneNotifications" type="checkbox" /><span></span></span></label>
+            </div></section>
+          </div>
 
-        <div class="settings-group">
-          <h2>Hotkey</h2>
-          <label>Dictation key
-            <select id="set-hotkey"></select>
-          </label>
-          <p class="group-hint" id="hotkey-help">
-            <b>Hold</b> to talk, release to insert. <b>Tap</b> for hands-free — then tap again,
-            press <b>Space</b>, or click ✓ to finish. <b>Esc</b> cancels.
-          </p>
-          <p class="group-hint warn" id="hotkey-fallback" hidden>
-            Native key hook unavailable — running in fallback mode: press <b>F9</b> to toggle dictation.
-          </p>
-        </div>
+          <div class="settings-page" data-settings-page="appearance" hidden>
+            <header class="settings-page-header"><span class="settings-eyebrow">Make it yours</span><h1>Appearance</h1><p>Tune how Vaani sits on your desktop without sacrificing clarity.</p></header>
+            <div class="appearance-layout">
+              <div class="settings-card appearance-card">
+                <div class="appearance-control-heading"><div><strong>Window transparency</strong><small>Let your desktop softly show through the app.</small></div><output id="transparency-label">Off</output></div>
+                <input id="set-windowTransparency" class="appearance-range" type="range" min="0" max="100" step="5" />
+                <div class="range-labels"><span>Solid</span><span>Airy</span></div>
+                <div class="appearance-divider"></div>
+                <div class="appearance-control-heading"><div><strong>Primary color</strong><small>Used for actions, switches, charts, and highlights.</small></div><input id="set-accentColor" type="color" aria-label="Custom primary color" /></div>
+                <div class="color-swatches" aria-label="Primary color presets">
+                  <button class="swatch-pearl" type="button" data-accent="#e8e9eb" aria-label="Pearl"></button><button class="swatch-amber" type="button" data-accent="#efb56a" aria-label="Amber"></button><button class="swatch-aqua" type="button" data-accent="#75c7c9" aria-label="Aqua"></button><button class="swatch-sage" type="button" data-accent="#a9c982" aria-label="Sage"></button><button class="swatch-rose" type="button" data-accent="#d9a5bc" aria-label="Rose"></button>
+                </div>
+                <button id="accent-reset" class="settings-text-button" type="button">Reset appearance</button>
+              </div>
+              <div class="appearance-preview" aria-label="Appearance preview"><span class="preview-orbit one"></span><span class="preview-orbit two"></span><div class="preview-window"><div class="preview-titlebar"><i></i><i></i><i></i></div><div class="preview-content"><span class="preview-sidebar"></span><div><strong>Vaani</strong><p>Your words, ready wherever you type.</p><button type="button">Start dictation</button></div></div></div><small>Live preview</small></div>
+            </div>
+          </div>
 
-        <div class="settings-group">
-          <h2>Appearance</h2>
-          <p class="group-hint">Acrylic transparency lets your desktop blur through the window (Windows 11). The primary color tints buttons, charts, and the activity heatmap.</p>
-          <label>Window transparency <span id="transparency-label" class="label-hint">off</span>
-            <input id="set-windowTransparency" type="range" min="0" max="70" step="5" />
-          </label>
-          <label>Primary color
-            <input id="set-accentColor" type="color" />
-          </label>
-          <button id="accent-reset" class="link-btn">Reset color to default</button>
-        </div>
+          <div class="settings-page" data-settings-page="provider" hidden>
+            <header class="settings-page-header"><span class="settings-eyebrow">Private connection</span><h1>Provider</h1><p>Connect Vaani to your speech and language deployments. Credentials remain in a local configuration file.</p></header>
+            <form id="provider-form" class="settings-card provider-card">
+              <div class="provider-status-line"><span id="provider-status-dot"></span><strong id="config-status">Checking configuration…</strong><span id="provider-status-detail"></span></div>
+              <div class="settings-form-grid">
+                <label class="settings-field full"><span>Base URL</span><input id="provider-base-url" type="url" placeholder="https://your-resource.example.com" autocomplete="url" required /><small>The endpoint that receives transcription and language requests.</small></label>
+                <label class="settings-field full"><span>API key</span><span class="secret-input"><input id="provider-api-key" type="password" placeholder="Enter your API key" autocomplete="off" required /><button id="provider-key-toggle" type="button">Show</button></span><small>Stored only in Vaani's local config file.</small></label>
+                <label class="settings-field"><span>Whisper deployment</span><input id="provider-whisper" type="text" placeholder="whisper" autocomplete="off" required /></label>
+                <label class="settings-field"><span>LLM deployment</span><input id="provider-llm" type="text" placeholder="Optional" autocomplete="off" /><small>Used to clean up and format transcripts.</small></label>
+              </div>
+              <div class="settings-form-actions"><button id="btn-open-config" class="settings-text-button" type="button">Open config file</button><span id="test-result" aria-live="polite"></span><button id="btn-test" class="secondary-btn" type="button">Test connection</button><button class="primary-btn" type="submit">Save provider</button></div>
+            </form>
+          </div>
 
-        <div class="settings-group">
-          <h2>Behavior</h2>
-          <label class="toggle"><input id="set-fastMode" type="checkbox" /><span></span>Fast mode — transcribe long dictations in chunks while you speak</label>
-          <label class="toggle"><input id="set-spokenCommands" type="checkbox" /><span></span>Spoken commands — "new line", "new paragraph", "period", "scratch that"</label>
-          <label>End hands-free dictation after silence
-            <select id="set-autoStopSec">
-              <option value="0">Never</option>
-              <option value="5">5 seconds</option>
-              <option value="8">8 seconds</option>
-              <option value="15">15 seconds</option>
-            </select>
-          </label>
-          <label class="toggle"><input id="set-autoPaste" type="checkbox" /><span></span>Insert text into the active app (auto-paste)</label>
-          <label class="toggle"><input id="set-restoreClipboard" type="checkbox" /><span></span>Restore previous clipboard after pasting</label>
-          <label class="toggle"><input id="set-compensateSpace" type="checkbox" /><span></span>Remove the space typed when ending with Spacebar</label>
-          <label class="toggle"><input id="set-sounds" type="checkbox" /><span></span>Start/stop sounds</label>
-          <label class="toggle"><input id="set-launchAtLogin" type="checkbox" /><span></span>Launch Vaani when Windows starts</label>
+          <div class="settings-page" data-settings-page="account" hidden>
+            <header class="settings-page-header"><span class="settings-eyebrow">Local identity</span><h1>Account</h1><p>Personalize how Vaani greets you. Nothing here is synced or sent to a database.</p></header>
+            <form id="account-form" class="settings-card account-card">
+              <div class="account-photo-block"><span id="account-avatar" class="profile-avatar profile-avatar-large"><span>V</span></span><div><strong>Profile picture</strong><small>Shown in the sidebar on this device.</small><div class="account-photo-actions"><button id="account-photo-change" class="secondary-btn" type="button">Choose image</button><button id="account-photo-remove" class="settings-text-button danger-text" type="button">Remove</button></div></div><input id="account-photo-input" type="file" accept="image/png,image/jpeg,image/webp" hidden /></div>
+              <div class="account-divider"></div>
+              <div class="settings-form-grid"><label class="settings-field"><span>First name</span><input id="account-first-name" type="text" maxlength="60" autocomplete="given-name" placeholder="First name" /></label><label class="settings-field"><span>Last name</span><input id="account-last-name" type="text" maxlength="60" autocomplete="family-name" placeholder="Last name" /></label><label class="settings-field full"><span>Email address</span><input id="account-email" type="email" maxlength="160" autocomplete="email" placeholder="you@example.com" /></label></div>
+              <div class="account-privacy-note"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3zm3 4a2 2 0 0 1 1 3.7V20h-2v-2.3A2 2 0 0 1 12 14z"/></svg><span><strong>Local-only profile</strong>Your information is saved to this computer and is used only for display.</span></div>
+              <div class="settings-form-actions account-actions"><span id="account-save-status" aria-live="polite"></span><button class="primary-btn" type="submit">Save profile</button></div>
+            </form>
+          </div>
         </div>
       </section>
 

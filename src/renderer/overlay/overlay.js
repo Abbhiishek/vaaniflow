@@ -13,6 +13,7 @@ const idleLabel = document.getElementById('idle-label');
 
 let uiState = 'idle';
 let msgResetTimer = null;
+let showFlowBar = true;
 
 // ---------------- audio capture ----------------
 
@@ -349,6 +350,7 @@ function stopDrawLoop() {
 function setState(state) {
   uiState = state;
   pill.className = `state-${state}`;
+  document.body.classList.toggle('flow-bar-hidden', !showFlowBar && state === 'idle');
   clearTimeout(msgResetTimer);
   if (state === 'recording') {
     timerEl.textContent = '0:00';
@@ -360,6 +362,17 @@ function setState(state) {
     window.vaani.setHover(false);
   }
 }
+
+async function refreshOverlayPreferences() {
+  try {
+    const result = await window.vaani.getSettings();
+    showFlowBar = result.settings.showFlowBar !== false;
+    document.body.classList.toggle('flow-bar-hidden', !showFlowBar && uiState === 'idle');
+  } catch {}
+}
+
+window.vaani.onSettingsChanged(refreshOverlayPreferences);
+refreshOverlayPreferences();
 
 function flashMessage(state, text, ms) {
   setState(state);

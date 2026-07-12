@@ -73,6 +73,7 @@ html, body {
 #pill.state-idle:hover #idle-content { display: flex; }
 #idle-content { color: #b9bbc0; font-size: 12px; padding: 0 14px; }
 #mic-icon { color: #d6d7da; flex: 0 0 auto; }
+body.flow-bar-hidden #pill.state-idle { opacity: 0; pointer-events: none; transform: translateY(12px); }
 
 /* ---------- recording ---------- */
 #pill.state-recording {

@@ -103,6 +103,12 @@ class EditableConfig {
     }
   }
 
+  update(patch) {
+    let current;
+    try { current = this.load(); } catch { current = CONFIG_DEFAULTS; }
+    return this._write({ ...current, ...(patch && typeof patch === 'object' ? patch : {}) });
+  }
+
   info() {
     const config = this.load();
     const missing = [];
@@ -123,13 +129,19 @@ class EditableConfig {
 const SETTINGS_DEFAULTS = {
   settingsSchemaVersion: 0,
   language: 'auto',
+  appLanguage: 'en',
   hotkey: 'ctrl+win',
   micDeviceId: 'default',
   autoPaste: true,
   restoreClipboard: false,
   sounds: true,
+  muteMusicWhileDictating: false,
   compensateSpace: true,
   launchAtLogin: false,
+  showFlowBar: true,
+  showInDock: true,
+  milestoneNotifications: true,
+  milestonesReached: [],
   timeoutSec: 60,
   fastMode: true,
   dictionarySchemaVersion: 0,
@@ -149,7 +161,11 @@ const SETTINGS_DEFAULTS = {
   accentColor: '#e8e9eb', // primary color for buttons, toggles, charts, heatmap
   autoLearnVocabulary: true, // auto-import repeated proper nouns/acronyms
   dictionarySuggestions: {}, // internal candidate counts kept for auto-learning
-  dictionaryDismissed: [] // legacy rejected candidates
+  dictionaryDismissed: [], // legacy rejected candidates
+  profileFirstName: '',
+  profileLastName: '',
+  profileEmail: '',
+  profilePicture: ''
 };
 
 const LEGACY_CONFIG_KEYS = [
@@ -215,13 +231,14 @@ class Store {
     return this.settingsFile.data;
   }
 
-  updateSettings(patch) {
+  updateSettings(patch, { flush = false } = {}) {
     const nextPatch = patch && typeof patch === 'object' ? { ...patch } : {};
     if (Object.prototype.hasOwnProperty.call(nextPatch, 'dictionaryEntries')) {
       Object.assign(nextPatch, dictionarySettingsPatch(nextPatch.dictionaryEntries));
     }
     Object.assign(this.settingsFile.data, nextPatch);
-    this.settingsFile.save();
+    if (flush) this.settingsFile.flush();
+    else this.settingsFile.save();
     return this.settingsFile.data;
   }
 
@@ -239,6 +256,14 @@ class Store {
 
   configInfo() {
     return this.configFile.info();
+  }
+
+  getConfig() {
+    return this.configFile.load();
+  }
+
+  updateConfig(patch) {
+    return this.configFile.update(patch);
   }
 
   get configPath() {

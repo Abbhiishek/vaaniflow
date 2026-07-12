@@ -5,9 +5,13 @@ contextBridge.exposeInMainWorld('vaani', {
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
+  setShortcutCapture: (capturing) => ipcRenderer.invoke('shortcut:capture', !!capturing),
   testConnection: () => ipcRenderer.invoke('settings:test'),
   getConfigInfo: () => ipcRenderer.invoke('config:info'),
+  getConfig: () => ipcRenderer.invoke('config:get'),
+  setConfig: (patch) => ipcRenderer.invoke('config:set', patch),
   openConfig: () => ipcRenderer.invoke('config:open'),
+  onConfigChanged: (cb) => ipcRenderer.on('config:changed', () => cb()),
 
   // history
   getHistory: () => ipcRenderer.invoke('history:get'),
@@ -16,6 +20,7 @@ contextBridge.exposeInMainWorld('vaani', {
   onHistoryChanged: (cb) => ipcRenderer.on('history:changed', () => cb()),
 
   onSettingsChanged: (cb) => ipcRenderer.on('settings:changed', () => cb()),
+  onMilestoneReached: (cb) => ipcRenderer.on('milestone:reached', (e, payload) => cb(payload)),
 
   // updates
   getUpdateState: () => ipcRenderer.invoke('update:state'),
@@ -25,6 +30,7 @@ contextBridge.exposeInMainWorld('vaani', {
   // misc
   copyText: (text) => ipcRenderer.invoke('clipboard:copy', text),
   toggleDictation: () => ipcRenderer.invoke('dictation:toggle'),
+  getSessionState: () => ipcRenderer.invoke('session:state'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
 
   // overlay

@@ -1,15 +1,17 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, ipcMain, clipboard, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, shell, Notification, nativeImage } = require('electron');
 const { Store } = require('./store');
 const { Injector } = require('./injector');
-const { Hotkeys, HOTKEY_LABELS, uiohookAvailable } = require('./hotkeys');
+const { Hotkeys, HOTKEY_LABELS, uiohookAvailable, hotkeyLabel, isValidHotkeyId } = require('./hotkeys');
 const { Session } = require('./session');
 const { createOverlayWindow, createDashboardWindow } = require('./windows');
 const { createTray } = require('./tray');
 const { testConnection } = require('./transcriber');
 const { Updater } = require('./updater');
+const { SystemAudioMute } = require('./system-audio');
+const { crossedWordMilestones, milestoneMessage } = require('./milestones');
 const dictionary = require('./dictionary');
 
 const IS_SMOKE = process.argv.includes('--smoke');
@@ -61,6 +63,7 @@ if (!app.requestSingleInstanceLock()) {
   let hotkeys = null;
   let session = null;
   let updater = null;
+  let systemAudio = null;
 
   function openDashboard() {
     if (dashboardWin && !dashboardWin.isDestroyed()) {
@@ -70,12 +73,49 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     dashboardWin = createDashboardWindow(loadAppIcon(), store.settings);
+    applyDockVisibility(store.settings.showInDock !== false);
     dashboardWin.on('closed', () => { dashboardWin = null; });
   }
 
   function sendToDashboard(channel, ...args) {
     if (dashboardWin && !dashboardWin.isDestroyed()) {
       dashboardWin.webContents.send(channel, ...args);
+    }
+  }
+
+  function sendToOverlay(channel, ...args) {
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send(channel, ...args);
+    }
+  }
+
+  function broadcastSettingsChanged() {
+    sendToDashboard('settings:changed');
+    sendToOverlay('settings:changed');
+  }
+
+  function applyDockVisibility(show) {
+    if (process.platform === 'darwin' && app.dock) {
+      if (show) app.dock.show();
+      else app.dock.hide();
+    }
+    if (dashboardWin && !dashboardWin.isDestroyed()) dashboardWin.setSkipTaskbar(!show);
+  }
+
+  function announceMilestone(entry) {
+    if (!store.settings.milestoneNotifications) return;
+    const totalWords = store.history.reduce((sum, item) => sum + Number(item.words || 0), 0);
+    const previousWords = Math.max(0, totalWords - Number(entry.words || 0));
+    const crossed = crossedWordMilestones(previousWords, totalWords, store.settings.milestonesReached);
+    if (!crossed.length) return;
+    store.updateSettings({
+      milestonesReached: [...new Set([...(store.settings.milestonesReached || []), ...crossed])]
+    }, { flush: true });
+    const milestone = crossed[crossed.length - 1];
+    const message = milestoneMessage(milestone);
+    sendToDashboard('milestone:reached', { words: milestone, message });
+    if (Notification.isSupported()) {
+      new Notification({ title: 'Vaani milestone', body: message }).show();
     }
   }
 
@@ -87,8 +127,13 @@ if (!app.requestSingleInstanceLock()) {
     const userDataDir = app.getPath('userData');
     migrateLegacyUserData(userDataDir);
     store = new Store(userDataDir);
+    if (!IS_SMOKE) app.setLoginItemSettings({ openAtLogin: !!store.settings.launchAtLogin });
     injector = new Injector();
     injector.start();
+    systemAudio = new SystemAudioMute();
+    systemAudio.ping().then((result) => {
+      if (!result.ok && systemAudio.available) console.error('system audio helper:', result.message);
+    });
 
     // Allow mic access for our own renderers.
     const { session: electronSession } = require('electron');
@@ -101,13 +146,16 @@ if (!app.requestSingleInstanceLock()) {
       store,
       injector,
       getOverlay: () => overlayWin,
-      getRuntimeSettings: () => store.runtimeSettings()
+      getRuntimeSettings: () => store.runtimeSettings(),
+      systemAudio
     });
     session.on('history-changed', () => sendToDashboard('history:changed'));
+    session.on('ui-state', (payload) => sendToDashboard('session', payload));
 
     session.on('transcript-added', (entry) => {
+      announceMilestone(entry);
       if (dictionary.learn(entry.text, store)) {
-        sendToDashboard('settings:changed');
+        broadcastSettingsChanged();
       }
     });
 
@@ -146,6 +194,11 @@ if (!app.requestSingleInstanceLock()) {
     updater.start();
 
     registerIpc();
+    fs.watchFile(store.configPath, { interval: 600 }, (current, previous) => {
+      if (current.mtimeMs !== previous.mtimeMs || current.size !== previous.size) {
+        sendToDashboard('config:changed');
+      }
+    });
     openDashboard();
 
     if (IS_SMOKE) await runSmokeTest();
@@ -153,20 +206,41 @@ if (!app.requestSingleInstanceLock()) {
 
   function registerIpc() {
     // ---- settings ----
-    ipcMain.handle('settings:get', () => ({
-      settings: store.settings,
-      hotkeyLabels: HOTKEY_LABELS,
-      uiohookAvailable
-    }));
+    ipcMain.handle('settings:get', () => {
+      const labels = { ...HOTKEY_LABELS };
+      if (String(store.settings.hotkey).startsWith('custom:')) {
+        labels[store.settings.hotkey] = hotkeyLabel(store.settings.hotkey) || 'Custom shortcut';
+      }
+      return {
+        settings: store.settings,
+        hotkeyLabels: labels,
+        uiohookAvailable,
+        capabilities: {
+          audioMuting: !!systemAudio?.available,
+          notifications: Notification.isSupported()
+        },
+        systemStatus: {
+          launchAtLogin: app.getLoginItemSettings().openAtLogin
+        }
+      };
+    });
 
     ipcMain.handle('settings:set', (e, patch) => {
       const prev = { ...store.settings };
-      const next = store.updateSettings(patch);
-      if (patch.hotkey && patch.hotkey !== prev.hotkey) hotkeys.setHotkey(patch.hotkey);
-      if ('launchAtLogin' in patch) {
+      const nextPatch = patch && typeof patch === 'object' ? { ...patch } : {};
+      if (nextPatch.hotkey && !isValidHotkeyId(nextPatch.hotkey)) delete nextPatch.hotkey;
+      if (nextPatch.hotkey && nextPatch.hotkey !== prev.hotkey && !hotkeys.setHotkey(nextPatch.hotkey)) {
+        delete nextPatch.hotkey;
+      }
+      if (nextPatch.hotkey) hotkeys.setSuspended(false);
+      const immediatePersistence = ['hotkey', 'profileFirstName', 'profileLastName', 'profileEmail', 'profilePicture']
+        .some((key) => Object.prototype.hasOwnProperty.call(nextPatch, key));
+      const next = store.updateSettings(nextPatch, { flush: immediatePersistence });
+      if ('launchAtLogin' in nextPatch) {
         app.setLoginItemSettings({ openAtLogin: !!next.launchAtLogin });
       }
-      if ('windowTransparency' in patch && dashboardWin && !dashboardWin.isDestroyed()) {
+      if ('showInDock' in nextPatch) applyDockVisibility(next.showInDock !== false);
+      if ('windowTransparency' in nextPatch && dashboardWin && !dashboardWin.isDestroyed()) {
         const acrylic = Number(next.windowTransparency) > 0;
         try {
           dashboardWin.setBackgroundMaterial(acrylic ? 'acrylic' : 'none');
@@ -175,8 +249,16 @@ if (!app.requestSingleInstanceLock()) {
           console.error('background material:', err.message);
         }
       }
+      sendToOverlay('settings:changed');
       return next;
     });
+
+    ipcMain.handle('shortcut:capture', (e, capturing) => {
+      hotkeys.setSuspended(!!capturing);
+      return { ok: true };
+    });
+
+    ipcMain.handle('session:state', () => session.uiState());
 
     ipcMain.handle('settings:test', () => {
       try {
@@ -192,6 +274,20 @@ if (!app.requestSingleInstanceLock()) {
         return { ok: true, ...store.configInfo() };
       } catch (err) {
         return { ok: false, path: store.configPath, message: err.message };
+      }
+    });
+    ipcMain.handle('config:get', () => {
+      try {
+        return { ok: true, config: store.getConfig() };
+      } catch (err) {
+        return { ok: false, message: err.message };
+      }
+    });
+    ipcMain.handle('config:set', (e, patch) => {
+      try {
+        return { ok: true, config: store.updateConfig(patch) };
+      } catch (err) {
+        return { ok: false, message: err.message };
       }
     });
     ipcMain.handle('config:open', async () => {
@@ -270,7 +366,9 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     try { hotkeys?.stop(); } catch {}
     try { injector?.stop(); } catch {}
+    try { systemAudio?.stop(); } catch {}
     try { store?.flush(); } catch {}
+    try { if (store) fs.unwatchFile(store.configPath); } catch {}
     try { fs.unwatchFile(ICON_PATH); } catch {}
     if (overlayWin && !overlayWin.isDestroyed()) {
       overlayWin.destroy(); // closable:false — must destroy explicitly

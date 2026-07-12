@@ -5,18 +5,55 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 
 let settings = {};
 let history = [];
-let saveTimer = null;
+const saveTimers = new Map();
 let configInfo = null;
+let lastAppView = 'home';
+let hotkeyLabels = {};
+
+const SETTINGS_CATEGORIES = new Set(['general', 'system', 'appearance', 'provider', 'account']);
 
 // ---------------- navigation ----------------
 
-function showView(name) {
-  $$('.view').forEach((v) => v.classList.remove('active'));
-  $(`#view-${name}`).classList.add('active');
-  $$('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+function showSettingsCategory(category) {
+  const next = SETTINGS_CATEGORIES.has(category) ? category : 'general';
+  $$('.settings-nav-item').forEach((item) => item.classList.toggle('active', item.dataset.settingsCategory === next));
+  $$('.settings-page').forEach((page) => {
+    const active = page.dataset.settingsPage === next;
+    page.hidden = !active;
+    page.classList.toggle('active', active);
+  });
+  $('.settings-main').scrollTop = 0;
 }
 
-$$('.nav-item').forEach((btn) => btn.addEventListener('click', () => showView(btn.dataset.view)));
+function showView(name, settingsCategory = 'general') {
+  const target = $(`#view-${name}`) ? name : 'home';
+  $$('.view').forEach((v) => v.classList.remove('active'));
+  $(`#view-${target}`).classList.add('active');
+  $$('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.view === target));
+  document.body.classList.toggle('settings-mode', target === 'settings');
+  if (target === 'settings') showSettingsCategory(settingsCategory);
+  else lastAppView = target;
+}
+
+function navigateTo(view, category = 'general') {
+  const route = view === 'settings' ? `/settings/${category}` : `/${view}`;
+  if (window.location.hash.slice(1) === route) showView(view, category);
+  else window.location.hash = route;
+}
+
+function routeFromLocation() {
+  const route = window.location.hash.slice(1) || '/home';
+  const match = route.match(/^\/settings\/([^/]+)$/);
+  if (match) showView('settings', match[1]);
+  else showView(route.replace(/^\//, '') || 'home');
+}
+
+$$('.nav-item').forEach((btn) => btn.addEventListener('click', () => navigateTo(btn.dataset.view)));
+$$('.settings-nav-item').forEach((btn) => btn.addEventListener('click', () => navigateTo('settings', btn.dataset.settingsCategory)));
+$('#settings-back').addEventListener('click', () => navigateTo(lastAppView));
+$('#sidebar-profile').addEventListener('click', () => navigateTo('settings', 'account'));
+$('#settings-profile-summary').addEventListener('click', () => navigateTo('settings', 'account'));
+window.addEventListener('hashchange', routeFromLocation);
 
 $('#btn-dictate').addEventListener('click', () => window.vaani.toggleDictation());
 
@@ -30,6 +67,83 @@ function toast(text) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
 }
+
+// ---------------- live dictation status ----------------
+
+let homeSessionResetTimer = null;
+let homeSessionType = 'idle';
+let homeSessionMode = 'ptt';
+
+function storedShortcutLabel() {
+  return hotkeyLabels[settings.hotkey] || customShortcutLabel(settings.hotkey) || 'Your shortcut';
+}
+
+function syncHomeShortcut() {
+  const shortcut = storedShortcutLabel();
+  $('#home-shortcut').textContent = shortcut;
+  if (homeSessionType === 'idle') {
+    $('#home-session-detail').textContent = `Hold ${shortcut} and speak. Release to insert your words.`;
+  } else if (homeSessionType === 'recording') {
+    $('#home-session-detail').textContent = homeSessionMode === 'handsfree'
+      ? `Press ${shortcut} again or Space to finish.`
+      : `Release ${shortcut} to finish.`;
+  }
+}
+
+function updateHomeSession(message = { type: 'idle' }) {
+  clearTimeout(homeSessionResetTimer);
+  const card = $('#home-session');
+  const label = $('#home-session-label');
+  const detail = $('#home-session-detail');
+  const shortcut = storedShortcutLabel();
+  const type = message.type || 'idle';
+
+  if (type === 'start') {
+    homeSessionType = 'recording';
+    homeSessionMode = message.mode || 'ptt';
+    card.className = 'home-session recording';
+    label.textContent = homeSessionMode === 'handsfree' ? 'Recording hands-free' : 'Recording';
+    detail.textContent = homeSessionMode === 'handsfree'
+      ? `Press ${shortcut} again or Space to finish.`
+      : `Release ${shortcut} to finish.`;
+  } else if (type === 'mode') {
+    homeSessionType = 'recording';
+    homeSessionMode = message.mode || 'handsfree';
+    card.className = 'home-session recording';
+    label.textContent = 'Recording hands-free';
+    detail.textContent = `Press ${shortcut} again or Space to finish.`;
+  } else if (type === 'partial') {
+    if (homeSessionType !== 'recording') updateHomeSession({ type: 'start', mode: homeSessionMode });
+    if (message.text) detail.textContent = message.text;
+  } else if (type === 'processing' || type === 'status') {
+    homeSessionType = 'processing';
+    card.className = 'home-session processing';
+    label.textContent = type === 'status' && message.text ? message.text : 'Transcribing';
+    detail.textContent = 'Turning your recording into text…';
+  } else if (type === 'done') {
+    homeSessionType = 'done';
+    card.className = 'home-session done';
+    label.textContent = 'Dictation complete';
+    detail.textContent = `${message.words || 0} word${message.words === 1 ? '' : 's'} ${message.pasted ? 'inserted' : 'copied'}.`;
+    homeSessionResetTimer = setTimeout(() => updateHomeSession({ type: 'idle' }), 1800);
+  } else if (type === 'error') {
+    homeSessionType = 'error';
+    card.className = 'home-session error';
+    label.textContent = 'Dictation stopped';
+    detail.textContent = message.message || 'Something went wrong.';
+    homeSessionResetTimer = setTimeout(() => updateHomeSession({ type: 'idle' }), 3200);
+  } else {
+    homeSessionType = 'idle';
+    homeSessionMode = 'ptt';
+    card.className = 'home-session ready';
+    label.textContent = 'Ready to dictate';
+    detail.textContent = `Hold ${shortcut} and speak. Release to insert your words.`;
+  }
+
+  $('#home-shortcut').textContent = shortcut;
+}
+
+window.vaani.onSession(updateHomeSession);
 
 // ---------------- home: past generations ----------------
 
@@ -359,24 +473,18 @@ function renderAll() {
 
 const FIELDS = {
   language: { el: '#set-language', type: 'select' },
+  appLanguage: { el: '#set-appLanguage', type: 'select' },
   micDeviceId: { el: '#set-mic', type: 'select' },
   hotkey: { el: '#set-hotkey', type: 'select' },
   autoLearnVocabulary: { el: '#set-autoLearnVocabulary', type: 'bool' },
-  polishTimeoutSec: { el: '#set-polishTimeoutSec', type: 'select' },
-  defaultTone: { el: '#set-defaultTone', type: 'select' },
-  autoTone: { el: '#set-autoTone', type: 'bool' },
-  styleInstructions: { el: '#set-styleInstructions', type: 'text' },
-  polishEnabled: { el: '#set-polishEnabled', type: 'bool' },
-  fastMode: { el: '#set-fastMode', type: 'bool' },
-  spokenCommands: { el: '#set-spokenCommands', type: 'bool' },
-  autoStopSec: { el: '#set-autoStopSec', type: 'select' },
-  windowTransparency: { el: '#set-windowTransparency', type: 'text' },
-  accentColor: { el: '#set-accentColor', type: 'text' },
-  autoPaste: { el: '#set-autoPaste', type: 'bool' },
-  restoreClipboard: { el: '#set-restoreClipboard', type: 'bool' },
-  compensateSpace: { el: '#set-compensateSpace', type: 'bool' },
+  windowTransparency: { el: '#set-windowTransparency', type: 'range' },
+  accentColor: { el: '#set-accentColor', type: 'color' },
   sounds: { el: '#set-sounds', type: 'bool' },
-  launchAtLogin: { el: '#set-launchAtLogin', type: 'bool' }
+  muteMusicWhileDictating: { el: '#set-muteMusicWhileDictating', type: 'bool' },
+  launchAtLogin: { el: '#set-launchAtLogin', type: 'bool' },
+  showFlowBar: { el: '#set-showFlowBar', type: 'bool' },
+  showInDock: { el: '#set-showInDock', type: 'bool' },
+  milestoneNotifications: { el: '#set-milestoneNotifications', type: 'bool' }
 };
 
 function readField(key) {
@@ -392,37 +500,147 @@ function writeField(key, value) {
   else node.value = value ?? '';
 }
 
-function readSettingsPatch() {
-  const patch = {};
-  for (const k of Object.keys(FIELDS)) patch[k] = readField(k);
-  patch.polishTimeoutSec = Number(patch.polishTimeoutSec) || 8;
-  patch.autoStopSec = Number(patch.autoStopSec) || 0;
-  patch.windowTransparency = Number(patch.windowTransparency) || 0;
-  return patch;
-}
-
 function scheduleSave(key) {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    settings = await window.vaani.setSettings(readSettingsPatch());
-  }, ['styleInstructions', 'windowTransparency', 'accentColor'].includes(key) ? 500 : 0);
+  clearTimeout(saveTimers.get(key));
+  const timer = setTimeout(async () => {
+    let value = readField(key);
+    if (key === 'windowTransparency') value = Number(value) || 0;
+    settings = await window.vaani.setSettings({ [key]: value });
+    if (key === 'hotkey') syncHomeShortcut();
+    if (key === 'appLanguage') document.documentElement.lang = value || 'en';
+    const note = $('#general-save-note');
+    if (note && ['language', 'appLanguage', 'micDeviceId', 'hotkey'].includes(key)) {
+      note.textContent = 'Saved on this device.';
+      setTimeout(() => { note.textContent = 'Changes save automatically on this device.'; }, 1400);
+    }
+  }, ['windowTransparency', 'accentColor'].includes(key) ? 350 : 0);
+  saveTimers.set(key, timer);
 }
 
 for (const key of Object.keys(FIELDS)) {
   const node = $(FIELDS[key].el);
-  node.addEventListener(FIELDS[key].type === 'text' ? 'input' : 'change', () => scheduleSave(key));
+  const immediate = ['range', 'color'].includes(FIELDS[key].type);
+  node.addEventListener(immediate ? 'input' : 'change', () => scheduleSave(key));
 }
+
+// ---------------- shortcut recorder ----------------
+
+let shortcutRecording = false;
+const SHORTCUT_MODIFIER_CODES = new Set([
+  'ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight',
+  'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight'
+]);
+
+function shortcutKeyLabel(code) {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  const labels = {
+    Space: 'Space', Enter: 'Enter', Tab: 'Tab', Backspace: 'Backspace',
+    ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+    PageUp: 'Page Up', PageDown: 'Page Down', Insert: 'Insert', Delete: 'Delete',
+    Semicolon: ';', Equal: '=', Comma: ',', Minus: '-', Period: '.', Slash: '/',
+    Backquote: '`', BracketLeft: '[', Backslash: '\\', BracketRight: ']', Quote: "'"
+  };
+  return labels[code] || (/^F([1-9]|1[0-9]|2[0-4])$/.test(code) ? code : '');
+}
+
+function customShortcutLabel(id) {
+  if (!String(id).startsWith('custom:')) return hotkeyLabels[id] || id;
+  const parts = id.slice(7).split('+');
+  const code = parts.pop();
+  const names = { Control: 'Ctrl', Shift: 'Shift', Alt: 'Alt', Meta: 'Win' };
+  return [...parts.map((part) => names[part] || part), shortcutKeyLabel(code)].join(' + ');
+}
+
+function ensureHotkeyOption(id, label = customShortcutLabel(id)) {
+  if (!id) return;
+  const select = $('#set-hotkey');
+  let option = [...select.options].find((item) => item.value === id);
+  if (!option) {
+    option = document.createElement('option');
+    option.value = id;
+    select.appendChild(option);
+  }
+  option.textContent = label;
+}
+
+async function stopShortcutRecording(message = '') {
+  if (!shortcutRecording) return;
+  shortcutRecording = false;
+  await window.vaani.setShortcutCapture(false);
+  $('#shortcut-record').classList.remove('recording');
+  $('#shortcut-record').textContent = 'Record';
+  $('#shortcut-recording').hidden = true;
+  if (message) {
+    $('#shortcut-help').textContent = message;
+    setTimeout(() => { $('#shortcut-help').textContent = 'Hold the shortcut and speak. Release to insert your words.'; }, 2200);
+  }
+}
+
+async function startShortcutRecording() {
+  if (shortcutRecording) {
+    await stopShortcutRecording('Shortcut recording cancelled.');
+    return;
+  }
+  shortcutRecording = true;
+  await window.vaani.setShortcutCapture(true);
+  $('#shortcut-record').classList.add('recording');
+  $('#shortcut-record').textContent = 'Cancel';
+  $('#shortcut-recording').hidden = false;
+  $('#shortcut-help').textContent = 'Use Ctrl, Alt, or Win with another key. Function keys also work alone.';
+}
+
+$('#shortcut-record').addEventListener('click', startShortcutRecording);
+document.addEventListener('keydown', async (event) => {
+  if (!shortcutRecording) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if (event.code === 'Escape') {
+    await stopShortcutRecording('Shortcut recording cancelled.');
+    return;
+  }
+  if (SHORTCUT_MODIFIER_CODES.has(event.code)) return;
+  const key = shortcutKeyLabel(event.code);
+  if (!key) {
+    $('#shortcut-help').textContent = 'That key is not supported. Try a letter, number, navigation key, or F-key.';
+    return;
+  }
+  const modifiers = [];
+  if (event.ctrlKey) modifiers.push('Control');
+  if (event.altKey) modifiers.push('Alt');
+  if (event.shiftKey) modifiers.push('Shift');
+  if (event.metaKey) modifiers.push('Meta');
+  const functionKey = /^F([1-9]|1[0-9]|2[0-4])$/.test(event.code);
+  if (!functionKey && !modifiers.some((modifier) => ['Control', 'Alt', 'Meta'].includes(modifier))) {
+    $('#shortcut-help').textContent = 'Add Ctrl, Alt, or Win so normal typing cannot start dictation.';
+    return;
+  }
+  const id = `custom:${[...modifiers, event.code].join('+')}`;
+  const label = [...modifiers.map((modifier) => ({ Control: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Meta: 'Win' })[modifier]), key].join(' + ');
+  ensureHotkeyOption(id, label);
+  $('#set-hotkey').value = id;
+  settings = await window.vaani.setSettings({ hotkey: id });
+  if (settings.hotkey !== id) {
+    await stopShortcutRecording('That shortcut could not be activated. Try another combination.');
+    return;
+  }
+  hotkeyLabels[id] = label;
+  syncHomeShortcut();
+  await stopShortcutRecording(`Shortcut saved: ${label}`);
+});
 
 // ---------------- appearance (transparency + primary color) ----------------
 
 // Applies the theme instantly from current control values; the acrylic window
 // material itself is switched by the main process when the setting persists.
 function applyAppearance() {
-  const t = Math.max(0, Math.min(70, Number(readField('windowTransparency')) || 0)) / 100;
+  const transparency = Math.max(0, Math.min(100, Number(readField('windowTransparency')) || 0));
+  const t = transparency / 100;
   const root = document.documentElement.style;
   root.setProperty('--bg-alpha', String(1 - t));
   root.setProperty('--surface-alpha', String(Math.min(1, 1 - t + 0.08)));
-  $('#transparency-label').textContent = t > 0 ? `${Math.round(t * 100)}%` : 'off';
+  $('#transparency-label').textContent = t > 0 ? `${transparency}%` : 'Off';
+  $('#set-windowTransparency').style.setProperty('--range-progress', `${transparency}%`);
 
   let accent = String(readField('accentColor') || '').trim();
   if (!/^#[0-9a-f]{6}$/i.test(accent)) accent = '#e8e9eb';
@@ -431,15 +649,24 @@ function applyAppearance() {
   root.setProperty('--accent', accent);
   root.setProperty('--accent-text', luma > 150 ? '#101113' : '#ffffff');
   root.setProperty('--accent-hover', `color-mix(in srgb, ${accent} 82%, white)`);
+  $$('.color-swatches button').forEach((button) => button.classList.toggle('active', button.dataset.accent.toLowerCase() === accent.toLowerCase()));
 }
 
 $('#set-windowTransparency').addEventListener('input', applyAppearance);
 $('#set-accentColor').addEventListener('input', applyAppearance);
 $('#accent-reset').addEventListener('click', () => {
+  writeField('windowTransparency', 0);
   writeField('accentColor', '#e8e9eb');
   applyAppearance();
+  scheduleSave('windowTransparency');
   scheduleSave('accentColor');
 });
+
+$$('.color-swatches button').forEach((button) => button.addEventListener('click', () => {
+  writeField('accentColor', button.dataset.accent);
+  applyAppearance();
+  scheduleSave('accentColor');
+}));
 
 // ---------------- personal dictionary ----------------
 
@@ -661,9 +888,15 @@ document.addEventListener('keydown', (event) => {
 
 // The main process emits this when automatic learning imports a new entry.
 window.vaani.onSettingsChanged(async () => {
-  const { settings: fresh } = await window.vaani.getSettings();
-  settings = fresh;
-  writeField('autoLearnVocabulary', settings.autoLearnVocabulary);
+  const result = await window.vaani.getSettings();
+  settings = result.settings;
+  hotkeyLabels = result.hotkeyLabels || hotkeyLabels;
+  ensureHotkeyOption(settings.hotkey);
+  for (const key of Object.keys(FIELDS)) writeField(key, settings[key]);
+  document.documentElement.lang = settings.appLanguage || 'en';
+  applyAppearance();
+  syncHomeShortcut();
+  syncProfileSummary();
   syncDictionaryEntries();
   renderDictionary();
 });
@@ -751,36 +984,91 @@ $('#snippet-add-btn').addEventListener('click', async () => {
   renderSnippets();
 });
 
-// ---------------- Azure config + connection test ----------------
+// ---------------- provider config + connection test ----------------
 
 async function refreshConfigInfo() {
   configInfo = await window.vaani.getConfigInfo();
-  $('#config-path').textContent = configInfo.path || 'config.json';
   const status = $('#config-status');
+  const detail = $('#provider-status-detail');
+  const dot = $('#provider-status-dot');
+  dot.className = '';
   if (!configInfo.ok) {
     status.textContent = configInfo.message || 'Could not read config.json';
-    status.className = 'fail';
+    detail.textContent = 'Check the local file';
+    dot.className = 'fail';
   } else if (!configInfo.configured) {
-    status.textContent = `Missing configuration: ${configInfo.missing.join(', ')}`;
-    status.className = 'fail';
+    status.textContent = 'Setup required';
+    detail.textContent = `Missing ${configInfo.missing.join(', ')}`;
+    dot.className = 'fail';
   } else {
-    const polish = configInfo.llmDeployment
-      ? `polish: ${configInfo.llmDeployment}`
-      : 'polish disabled';
-    status.textContent = `Ready — Whisper: ${configInfo.whisperDeployment}; ${polish}`;
-    status.className = 'ok';
+    status.textContent = 'Provider ready';
+    detail.textContent = configInfo.llmDeployment
+      ? `${configInfo.whisperDeployment} · ${configInfo.llmDeployment}`
+      : `${configInfo.whisperDeployment} · transcription only`;
+    dot.className = 'ok';
   }
   return configInfo;
 }
 
+async function loadProviderConfig() {
+  const result = await window.vaani.getConfig();
+  if (!result?.ok) {
+    $('#test-result').textContent = result?.message || 'Could not load provider settings';
+    $('#test-result').className = 'fail';
+    return null;
+  }
+  const config = result.config || {};
+  $('#provider-base-url').value = config.baseUrl || '';
+  $('#provider-api-key').value = config.apiKey || '';
+  $('#provider-whisper').value = config.whisperDeployment || '';
+  $('#provider-llm').value = config.llmDeployment || '';
+  return config;
+}
+
+window.vaani.onConfigChanged(async () => {
+  await loadProviderConfig();
+  await refreshConfigInfo();
+  $('#test-result').textContent = 'Reloaded changes from the local config file.';
+  $('#test-result').className = 'ok';
+});
+
+async function saveProviderConfig({ announce = true } = {}) {
+  const form = $('#provider-form');
+  if (!form.reportValidity()) return null;
+  const result = await window.vaani.setConfig({
+    baseUrl: $('#provider-base-url').value.trim(),
+    apiKey: $('#provider-api-key').value.trim(),
+    whisperDeployment: $('#provider-whisper').value.trim(),
+    llmDeployment: $('#provider-llm').value.trim()
+  });
+  if (!result?.ok) {
+    $('#test-result').textContent = result?.message || 'Could not save provider';
+    $('#test-result').className = 'fail';
+    return null;
+  }
+  await refreshConfigInfo();
+  if (announce) {
+    $('#test-result').textContent = 'Provider saved locally.';
+    $('#test-result').className = 'ok';
+  }
+  return result.config;
+}
+
+$('#provider-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await saveProviderConfig();
+});
+
+$('#provider-key-toggle').addEventListener('click', () => {
+  const input = $('#provider-api-key');
+  const visible = input.type === 'text';
+  input.type = visible ? 'password' : 'text';
+  $('#provider-key-toggle').textContent = visible ? 'Show' : 'Hide';
+});
+
 $('#btn-open-config').addEventListener('click', async () => {
   const result = await window.vaani.openConfig();
   if (!result.ok) toast(result.message || 'Could not open config.json');
-});
-
-$('#btn-reload-config').addEventListener('click', async () => {
-  await refreshConfigInfo();
-  toast(configInfo.ok ? 'Configuration reloaded' : 'Configuration has an error');
 });
 
 $('#btn-test').addEventListener('click', async () => {
@@ -789,13 +1077,130 @@ $('#btn-test').addEventListener('click', async () => {
   btn.disabled = true;
   out.className = '';
   out.textContent = 'Testing…';
-  clearTimeout(saveTimer);
-  settings = await window.vaani.setSettings(readSettingsPatch());
-  await refreshConfigInfo();
-  const result = await window.vaani.testConnection();
-  out.textContent = result.message;
-  out.className = result.ok ? 'ok' : 'fail';
+  const saved = await saveProviderConfig({ announce: false });
+  if (saved) {
+    const result = await window.vaani.testConnection();
+    out.textContent = result.message;
+    out.className = result.ok ? 'ok' : 'fail';
+  }
   btn.disabled = false;
+});
+
+// ---------------- local profile ----------------
+
+let pendingProfilePicture = '';
+
+function profileInitials(firstName = '', lastName = '') {
+  const initials = `${String(firstName).trim().charAt(0)}${String(lastName).trim().charAt(0)}`.toUpperCase();
+  return initials || 'V';
+}
+
+function renderProfileAvatar(element, picture, initials) {
+  element.innerHTML = '';
+  if (picture) {
+    const image = document.createElement('img');
+    image.src = picture;
+    image.alt = '';
+    element.appendChild(image);
+  } else {
+    const text = document.createElement('span');
+    text.textContent = initials;
+    element.appendChild(text);
+  }
+}
+
+function syncProfileSummary() {
+  const first = String(settings.profileFirstName || '').trim();
+  const last = String(settings.profileLastName || '').trim();
+  const name = [first, last].filter(Boolean).join(' ') || 'Your profile';
+  const initials = profileInitials(first, last);
+  const picture = settings.profilePicture || '';
+  $('#sidebar-profile-name').textContent = name;
+  $('#settings-profile-name').textContent = name;
+  $('#settings-profile-email').textContent = settings.profileEmail || 'Add your details';
+  renderProfileAvatar($('#sidebar-profile-avatar'), picture, initials);
+  renderProfileAvatar($('#settings-profile-avatar'), picture, initials);
+  renderProfileAvatar($('#account-avatar'), pendingProfilePicture || picture, initials);
+  $('#greeting').textContent = first ? `Welcome back, ${first}` : 'Welcome back';
+}
+
+function populateAccountForm() {
+  $('#account-first-name').value = settings.profileFirstName || '';
+  $('#account-last-name').value = settings.profileLastName || '';
+  $('#account-email').value = settings.profileEmail || '';
+  pendingProfilePicture = settings.profilePicture || '';
+  syncProfileSummary();
+}
+
+function readProfilePicture(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that image.'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('That image format is not supported.'));
+      image.onload = () => {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext('2d');
+        const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+        const sx = (image.naturalWidth - sourceSize) / 2;
+        const sy = (image.naturalHeight - sourceSize) / 2;
+        context.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.86));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+$('#account-photo-change').addEventListener('click', () => $('#account-photo-input').click());
+$('#account-photo-input').addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    toast('Choose an image smaller than 5 MB.');
+    return;
+  }
+  try {
+    pendingProfilePicture = await readProfilePicture(file);
+    renderProfileAvatar($('#account-avatar'), pendingProfilePicture, profileInitials($('#account-first-name').value, $('#account-last-name').value));
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    event.target.value = '';
+  }
+});
+
+$('#account-photo-remove').addEventListener('click', () => {
+  pendingProfilePicture = '';
+  renderProfileAvatar($('#account-avatar'), '', profileInitials($('#account-first-name').value, $('#account-last-name').value));
+});
+
+for (const selector of ['#account-first-name', '#account-last-name']) {
+  $(selector).addEventListener('input', () => {
+    renderProfileAvatar(
+      $('#account-avatar'),
+      pendingProfilePicture,
+      profileInitials($('#account-first-name').value, $('#account-last-name').value)
+    );
+  });
+}
+
+$('#account-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  settings = await window.vaani.setSettings({
+    profileFirstName: $('#account-first-name').value.trim(),
+    profileLastName: $('#account-last-name').value.trim(),
+    profileEmail: $('#account-email').value.trim(),
+    profilePicture: pendingProfilePicture
+  });
+  syncProfileSummary();
+  $('#account-save-status').textContent = 'Profile saved on this device.';
+  $('#account-save-status').className = 'ok';
 });
 
 // ---------------- updates ----------------
@@ -806,6 +1211,9 @@ function showUpdateBanner(version) {
 }
 
 window.vaani.onUpdateReady(showUpdateBanner);
+window.vaani.onMilestoneReached((milestone) => {
+  toast(milestone?.message || 'You reached a new dictation milestone.');
+});
 $('#update-install').addEventListener('click', async () => {
   const result = await window.vaani.installUpdate();
   if (!result?.ok) {
@@ -817,33 +1225,66 @@ $('#update-install').addEventListener('click', async () => {
 
 // ---------------- microphones ----------------
 
-async function populateMics() {
+async function populateMics({ requestPermission = true } = {}) {
   const select = $('#set-mic');
+  const refresh = $('#mic-refresh');
+  const status = $('#mic-status');
+  refresh.classList.add('mic-refreshing');
   try {
-    // brief capture so enumerateDevices returns labels
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let stream = null;
+    if (requestPermission) stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const devices = await navigator.mediaDevices.enumerateDevices();
-    stream.getTracks().forEach((t) => t.stop());
-    const mics = devices.filter((d) => d.kind === 'audioinput' && d.deviceId !== 'default' && d.deviceId !== 'communications');
-    for (const mic of mics) {
+    stream?.getTracks().forEach((track) => track.stop());
+    const mics = devices.filter((device) => device.kind === 'audioinput');
+    select.innerHTML = '';
+    const seen = new Set();
+    mics.forEach((mic, index) => {
+      if (seen.has(mic.deviceId)) return;
+      seen.add(mic.deviceId);
       const opt = document.createElement('option');
       opt.value = mic.deviceId;
-      opt.textContent = mic.label || 'Microphone';
+      if (mic.deviceId === 'default') opt.textContent = 'System default';
+      else if (mic.deviceId === 'communications') opt.textContent = 'Communications default';
+      else opt.textContent = mic.label || `Microphone ${index + 1}`;
       select.appendChild(opt);
+    });
+    if (!select.options.length) {
+      const option = document.createElement('option');
+      option.value = 'default';
+      option.textContent = 'System default';
+      select.appendChild(option);
     }
-  } catch {
-    // mic unavailable — leave "System default" only
+    status.textContent = `${mics.length || 1} microphone option${mics.length === 1 ? '' : 's'} available.`;
+  } catch (error) {
+    select.innerHTML = '<option value="default">System default</option>';
+    status.textContent = error?.name === 'NotAllowedError'
+      ? 'Microphone permission is required to list every device.'
+      : 'Could not refresh microphones; the system default remains available.';
+  } finally {
+    refresh.classList.remove('mic-refreshing');
   }
-  // re-apply saved value now that options exist
-  if (settings.micDeviceId && [...select.options].some((o) => o.value === settings.micDeviceId)) {
+  if (settings.micDeviceId && [...select.options].some((option) => option.value === settings.micDeviceId)) {
+    select.value = settings.micDeviceId;
+  } else if (settings.micDeviceId && settings.micDeviceId !== 'default') {
+    const unavailable = document.createElement('option');
+    unavailable.value = settings.micDeviceId;
+    unavailable.textContent = 'Previously selected microphone (unavailable)';
+    select.appendChild(unavailable);
     select.value = settings.micDeviceId;
   }
+}
+
+$('#mic-refresh').addEventListener('click', () => populateMics({ requestPermission: true }));
+if (navigator.mediaDevices?.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', () => populateMics({ requestPermission: false }));
 }
 
 // ---------------- init ----------------
 
 (async function init() {
-  const { settings: s, hotkeyLabels, uiohookAvailable } = await window.vaani.getSettings();
+  const result = await window.vaani.getSettings();
+  const { settings: s, uiohookAvailable, capabilities = {}, systemStatus = {} } = result;
+  hotkeyLabels = result.hotkeyLabels || {};
   settings = s;
   history = await window.vaani.getHistory();
 
@@ -854,10 +1295,23 @@ async function populateMics() {
     opt.textContent = label;
     hotkeySelect.appendChild(opt);
   }
+  ensureHotkeyOption(settings.hotkey);
 
   for (const key of Object.keys(FIELDS)) writeField(key, settings[key]);
+  if (typeof systemStatus.launchAtLogin === 'boolean') writeField('launchAtLogin', systemStatus.launchAtLogin);
+  if (!capabilities.audioMuting) {
+    $('#set-muteMusicWhileDictating').disabled = true;
+    $('#set-muteMusicWhileDictating').closest('.setting-row').querySelector('small').textContent = 'System audio muting is available on Windows.';
+  }
+  if (!capabilities.notifications) {
+    $('#set-milestoneNotifications').disabled = true;
+    $('#set-milestoneNotifications').closest('.setting-row').querySelector('small').textContent = 'Desktop notifications are unavailable on this system.';
+  }
+  document.documentElement.lang = settings.appLanguage || 'en';
   applyAppearance();
   await refreshConfigInfo();
+  await loadProviderConfig();
+  populateAccountForm();
 
   syncDictionaryEntries();
   appProfiles = Array.isArray(settings.appProfiles) ? settings.appProfiles : [];
@@ -868,8 +1322,13 @@ async function populateMics() {
 
   $('#hotkey-fallback').hidden = uiohookAvailable;
   $('#home-hint').textContent = configInfo?.configured
-    ? `Hold ${hotkeyLabels[settings.hotkey] || 'your hotkey'} anywhere and speak — everything you dictate lands here.`
-    : 'Open config.json from Settings and add your Azure OpenAI deployment details.';
+    ? 'Your voice is ready wherever you type.'
+    : 'Add your provider details before starting your first dictation.';
+  syncHomeShortcut();
+  const currentSession = await window.vaani.getSessionState();
+  if (currentSession?.state === 'recording') updateHomeSession({ type: 'start', mode: currentSession.mode });
+  else if (currentSession?.state === 'processing') updateHomeSession({ type: 'processing' });
+  else updateHomeSession({ type: 'idle' });
 
   renderAll();
   populateMics();
@@ -877,5 +1336,6 @@ async function populateMics() {
   // update may have finished downloading before this window opened
   window.vaani.getUpdateState().then((u) => { if (u.ready) showUpdateBanner(u.version); });
 
-  if (!configInfo?.configured) showView('settings');
+  if (!configInfo?.configured && !window.location.hash) navigateTo('settings', 'provider');
+  else routeFromLocation();
 })();

@@ -68,6 +68,7 @@ function createDashboardWindow(iconPath, settings) {
     resizable: false,
     maximizable: false,
     fullscreenable: false,
+    skipTaskbar: settings?.showInDock === false,
     backgroundColor: acrylic ? '#00000000' : '#0f1011',
     ...(acrylic ? { backgroundMaterial: 'acrylic' } : {}),
     icon: iconPath,
