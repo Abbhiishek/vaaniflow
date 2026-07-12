@@ -130,15 +130,17 @@ test('settings sidebar header contains only the Settings label', () => {
   assert.doesNotMatch(brand, /<svg|control room|microphone/i);
 });
 
-test('sidebar uses the single Vaani brand image and wordmark', () => {
+test('dashboard uses the finalized Vaani SVG and wordmark', () => {
   const root = path.join(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'src', 'renderer', 'dashboard', 'dashboard.html'), 'utf8');
-  assert.match(html, /<img src="\.\.\/\.\.\/\.\.\/assets\/vaani\.png" alt="" \/>/);
+  assert.equal((html.match(/<img src="\.\.\/\.\.\/\.\.\/assets\/vaani\.svg" alt="" \/>/g) || []).length, 2);
   assert.match(html, /<span class="logo-wordmark">Vaani<\/span>/);
-  assert.equal(fs.existsSync(path.join(root, 'assets', 'vaani.png')), true);
+  const logo = fs.readFileSync(path.join(root, 'assets', 'vaani.svg'), 'utf8');
+  assert.match(logo, /^<svg\b/);
+  assert.match(logo, /viewBox="0 0 48 48"/);
 });
 
-test('window, tray, and installer all use the same brand image', () => {
+test('window, tray, and installer use the rasterized Vaani app icon', () => {
   const root = path.join(__dirname, '..');
   const main = fs.readFileSync(path.join(root, 'src', 'main', 'main.js'), 'utf8');
   const tray = fs.readFileSync(path.join(root, 'src', 'main', 'tray.js'), 'utf8');

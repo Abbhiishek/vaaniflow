@@ -1,7 +1,7 @@
 # VaaniFlow
 
 <p align="center">
-  <img src="assets/vaani.png" alt="VaaniFlow logo" width="120" />
+  <img src="assets/vaani.svg" alt="VaaniFlow logo" width="120" />
 </p>
 
 <p align="center">
