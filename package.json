@@ -1,7 +1,7 @@
 {
   "name": "vaaniflow",
   "productName": "Vaani",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Voice dictation for Windows with server-owned Azure OpenAI deployments and optional provider overrides.",
   "main": "src/main/main.js",
   "author": "Abhishek Kushwaha",
@@ -11,7 +11,7 @@
     "url": "https://github.com/Abbhiishek/vaaniflow.git"
   },
   "scripts": {
-    "start": "electron .",
+    "start": "node scripts/start-with-gateway.js",
     "smoke": "electron . --smoke",
     "test": "node --test",
     "server:dev": "npm --prefix server run dev",
