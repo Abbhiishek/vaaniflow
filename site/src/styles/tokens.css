@@ -42,8 +42,13 @@
   --radius-lg: 26px;
   --shadow-soft: 0 26px 80px rgba(0, 0, 0, 0.38);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --duration-fast: 160ms;
   --duration-base: 260ms;
+  --duration-press: 140ms;
+  --duration-reveal: 560ms;
 }
 
 @media (max-width: 719px) {

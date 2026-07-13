@@ -5,15 +5,15 @@ import { siteConfig } from '../config';
 ---
 
 <section class="hero shell" id="top" aria-labelledby="hero-title">
-  <div class="hero__intro">
+  <div class="hero__intro" data-reveal style="--reveal-delay: 0ms">
     <p class="mono-label">Vaani for Windows · Open-source dictation</p>
     <p class="hero__index" aria-hidden="true">01 / Voice to text</p>
   </div>
 
   <div class="hero__grid">
-    <h1 id="hero-title">Speak. Vaani writes <span>where your cursor is.</span></h1>
+    <h1 id="hero-title" data-reveal style="--reveal-delay: 60ms">Speak. Vaani writes <span>where your cursor is.</span></h1>
 
-    <div class="hero__copy">
+    <div class="hero__copy" data-reveal style="--reveal-delay: 120ms">
       <p>
         Hold a shortcut, speak naturally, and release. Vaani transcribes into the Windows app you are already using, with optional cleanup, app-aware writing styles, dictionary terms, and reusable snippets.
       </p>
@@ -34,7 +34,9 @@ import { siteConfig } from '../config';
     </div>
   </div>
 
-  <TranscriptRail />
+  <div class="hero__rail" data-reveal style="--reveal-delay: 180ms">
+    <TranscriptRail />
+  </div>
 </section>
 
 <style>
@@ -114,6 +116,10 @@ import { siteConfig } from '../config';
   .hero__requirements span {
     margin-inline: 0.35rem;
     color: var(--color-rule);
+  }
+
+  .hero__rail {
+    display: flow-root;
   }
 
   @media (max-width: 1050px) {

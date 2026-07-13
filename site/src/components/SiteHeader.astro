@@ -110,6 +110,7 @@ import { siteConfig } from '../config';
       background: var(--color-white);
       cursor: pointer;
       list-style: none;
+      transition: transform var(--duration-press) var(--ease-out-strong);
     }
 
     .mobile-nav summary::-webkit-details-marker {
@@ -121,7 +122,11 @@ import { siteConfig } from '../config';
       width: 18px;
       height: 1px;
       background: var(--color-ink);
-      transition: transform var(--duration-fast) ease;
+      transition: transform var(--duration-fast) var(--ease-in-out-strong);
+    }
+
+    .mobile-nav summary:active {
+      transform: scale(0.97);
     }
 
     .mobile-nav[open] summary span:first-child {
@@ -143,6 +148,11 @@ import { siteConfig } from '../config';
       border-bottom: 1px solid var(--color-rule);
       background: var(--color-paper);
       box-shadow: 0 24px 54px rgba(0, 0, 0, 0.46);
+      transform-origin: top center;
+    }
+
+    .mobile-nav[open] nav {
+      animation: mobile-nav-in 220ms var(--ease-drawer) both;
     }
 
     .mobile-nav nav > a:not(:last-child) {
@@ -158,9 +168,29 @@ import { siteConfig } from '../config';
     }
   }
 
+  @keyframes mobile-nav-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   @media (max-width: 719px) {
     .mobile-nav nav {
       padding-inline: 16px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-nav summary,
+    .mobile-nav summary span:not(.visually-hidden),
+    .mobile-nav[open] nav {
+      transform: none;
+      animation: none;
     }
   }
 </style>

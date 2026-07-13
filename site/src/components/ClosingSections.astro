@@ -15,14 +15,14 @@ import { siteConfig } from '../config';
 
   <div class="requirements">
     {requirements.map((item, index) => (
-      <article>
+      <article data-reveal style={`--reveal-delay: ${index * 60}ms`}>
         <span>{String(index + 1).padStart(2, '0')}</span>
         <div><small>{item.label}</small><strong>{item.value}</strong></div>
       </article>
     ))}
   </div>
 
-  <div class="setup__actions">
+  <div class="setup__actions" data-reveal style={`--reveal-delay: ${requirements.length * 60}ms`}>
     <p>Vaani is MIT licensed and has no VaaniFlow subscription. Usage charges from your configured Azure resource may apply.</p>
     <div>
       <ButtonLink href={siteConfig.downloadUrl} variant="primary" downloadAction>Download latest release</ButtonLink>
@@ -33,11 +33,11 @@ import { siteConfig } from '../config';
 
 <section class="open-source" id="open-source" aria-labelledby="source-title">
   <div class="shell open-source__grid">
-    <div>
+    <div data-reveal="left">
       <p class="mono-label">Built in public</p>
       <h2 id="source-title">Inspect the path from microphone to cursor.</h2>
     </div>
-    <div class="open-source__copy">
+    <div class="open-source__copy" data-reveal="right" style="--reveal-delay: 60ms">
       <p>VaaniFlow is published under the MIT license. Read the implementation, follow releases, open an issue, or contribute an improvement.</p>
       <div class="open-source__links">
         <ButtonLink href={siteConfig.githubUrl} variant="inverse" external>Browse source</ButtonLink>
@@ -48,7 +48,7 @@ import { siteConfig } from '../config';
   </div>
 </section>
 
-<section class="final-cta shell" aria-labelledby="final-title">
+<section class="final-cta shell" aria-labelledby="final-title" data-reveal="scale">
   <p class="mono-label">Ready when the cursor is</p>
   <div>
     <h2 id="final-title">Speak into the work already open.</h2>

@@ -12,82 +12,39 @@ import SectionHeading from './SectionHeading.astro';
     />
 
     <div class="chapters">
-      <article class="chapter chapter--capture">
-        <div class="chapter__copy">
-          <span class="chapter__number">01 / Capture</span>
-          <h3>Dictate without changing workspaces.</h3>
-          <p>Use push-to-talk or hands-free recording while messages, documents, terminals, and forms remain in front of you.</p>
-          <ul>
-            <li>System-wide voice input</li>
-            <li>Background chunking for longer recordings</li>
-            <li>Terminal-friendly paste behavior</li>
-          </ul>
-        </div>
-        <div class="chapter__visual capture-visual" aria-hidden="true">
-          <div class="app-list">
-            <span>Mail</span><span>Notes</span><span>Terminal</span><span>Browser</span>
-          </div>
-          <div class="capture-visual__field">
-            <small>Reply</small>
-            <p>I’ll review the changes this afternoon.<i></i></p>
-          </div>
-          <div class="mini-flow"><b></b><span>Vaani inserted 7 words</span><strong>✓</strong></div>
+      <article class="chapter" data-reveal="left">
+        <span class="chapter__number">01 / Capture</span>
+        <h3>Dictate without changing workspaces.</h3>
+        <p>Use push-to-talk or hands-free recording while messages, documents, terminals, and forms remain in front of you.</p>
+        <ul>
+          <li>System-wide voice input</li>
+          <li>Background chunking for longer recordings</li>
+          <li>Terminal-friendly paste behavior</li>
+        </ul>
+      </article>
+
+      <article class="chapter" data-reveal="right" style="--reveal-delay: 60ms">
+        <span class="chapter__number">02 / Refine</span>
+        <h3>Keep the thought. Shape the delivery.</h3>
+        <p>Optional cleanup can remove filler and adjust wording. App-aware styles help messages, email, and longer writing sound appropriate without changing the intent.</p>
+        <p class="chapter__disclosure">Requires the optional language-model deployment you configure.</p>
+      </article>
+
+      <article class="chapter" data-reveal="left">
+        <span class="chapter__number">03 / Remember</span>
+        <h3>Teach Vaani what you say often.</h3>
+        <p>Keep names, jargon, acronyms, preferred spellings, and repeatable blocks of text close to the dictation workflow.</p>
+        <div class="remember-tags" aria-label="Dictionary examples">
+          <span>VaaniFlow → VaaniFlow</span>
+          <span>kube control → kubectl</span>
+          <span>weekly update → saved snippet</span>
         </div>
       </article>
 
-      <article class="chapter chapter--refine">
-        <div class="chapter__visual refine-visual" aria-hidden="true">
-          <div class="refine-card refine-card--spoken">
-            <span>Spoken</span>
-            <p>“hey just wanted to check if the launch is still happening friday”</p>
-          </div>
-          <div class="refine-arrow">→</div>
-          <div class="refine-card refine-card--written">
-            <span>Work message · Casual</span>
-            <p>Hey, just checking whether the launch is still happening on Friday.</p>
-          </div>
-        </div>
-        <div class="chapter__copy">
-          <span class="chapter__number">02 / Refine</span>
-          <h3>Keep the thought. Shape the delivery.</h3>
-          <p>Optional cleanup can remove filler and adjust wording. App-aware styles help messages, email, and longer writing sound appropriate without changing the intent.</p>
-          <p class="chapter__disclosure">Requires the optional language-model deployment you configure.</p>
-        </div>
-      </article>
-
-      <article class="chapter chapter--remember">
-        <div class="chapter__copy">
-          <span class="chapter__number">03 / Remember</span>
-          <h3>Teach Vaani what you say often.</h3>
-          <p>Keep names, jargon, acronyms, preferred spellings, and repeatable blocks of text close to the dictation workflow.</p>
-          <div class="remember-tags" aria-label="Dictionary examples">
-            <span>VaaniFlow → VaaniFlow</span>
-            <span>kube control → kubectl</span>
-            <span>weekly update → saved snippet</span>
-          </div>
-        </div>
-        <div class="chapter__visual remember-visual" aria-hidden="true">
-          <header><span>Personal dictionary</span><b>+ Add term</b></header>
-          <div><strong>VaaniFlow</strong><small>Exact spelling · Starred</small></div>
-          <div><strong>kubectl</strong><small>Heard as “kube control”</small></div>
-          <div><strong>Acme North</strong><small>Project name</small></div>
-          <footer>Stored on this device</footer>
-        </div>
-      </article>
-
-      <article class="chapter chapter--review">
-        <div class="chapter__visual insights-visual" aria-hidden="true">
-          <div class="insight-stat"><span>Words dictated</span><strong>12,480</strong><small>On this device</small></div>
-          <div class="insight-bars">
-            <i style="--h: 38%"></i><i style="--h: 66%"></i><i style="--h: 48%"></i><i style="--h: 78%"></i><i style="--h: 54%"></i><i style="--h: 92%"></i><i style="--h: 70%"></i>
-          </div>
-          <div class="insight-meta"><span>Mon</span><span>Today</span></div>
-        </div>
-        <div class="chapter__copy">
-          <span class="chapter__number">04 / Review</span>
-          <h3>See what your voice produced.</h3>
-          <p>Search local history and review word counts, dictation speed, streaks, and application usage without sending an analytics profile to VaaniFlow.</p>
-        </div>
+      <article class="chapter" data-reveal="right" style="--reveal-delay: 60ms">
+        <span class="chapter__number">04 / Review</span>
+        <h3>See what your voice produced.</h3>
+        <p>Search local history and review word counts, dictation speed, streaks, and application usage without sending an analytics profile to VaaniFlow.</p>
       </article>
     </div>
   </div>
@@ -101,23 +58,17 @@ import SectionHeading from './SectionHeading.astro';
 
   .chapters {
     display: grid;
-    gap: var(--space-9);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
     margin-top: var(--space-9);
+    border: 1px solid var(--color-rule);
+    background: var(--color-rule);
   }
 
   .chapter {
-    display: grid;
-    grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
-    gap: clamp(3rem, 8vw, 8rem);
-    align-items: center;
-  }
-
-  .chapter:nth-child(even) {
-    grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.78fr);
-  }
-
-  .chapter__copy {
-    max-width: 480px;
+    min-height: 360px;
+    padding: clamp(1.5rem, 4vw, 3.5rem);
+    background: var(--color-paper);
   }
 
   .chapter__number {
@@ -130,7 +81,8 @@ import SectionHeading from './SectionHeading.astro';
   }
 
   .chapter h3 {
-    margin: var(--space-4) 0 var(--space-4);
+    max-width: 520px;
+    margin: var(--space-6) 0 var(--space-4);
     font-size: var(--text-h3);
     font-variation-settings: 'wdth' 88;
     font-weight: 610;
@@ -138,8 +90,9 @@ import SectionHeading from './SectionHeading.astro';
     line-height: 1;
   }
 
-  .chapter__copy > p,
+  .chapter > p,
   .chapter li {
+    max-width: 580px;
     color: var(--color-steel);
     font-size: 0.91rem;
     line-height: 1.72;
@@ -177,155 +130,6 @@ import SectionHeading from './SectionHeading.astro';
     font-size: 0.68rem !important;
   }
 
-  .chapter__visual {
-    min-width: 0;
-    border: 1px solid var(--color-rule);
-    border-radius: var(--radius-md);
-    background: var(--color-white);
-    box-shadow: 0 22px 65px rgba(0, 0, 0, 0.36);
-  }
-
-  .capture-visual {
-    position: relative;
-    min-height: 480px;
-    overflow: hidden;
-    background: linear-gradient(135deg, #141719, #1b1f21 58%);
-  }
-
-  .app-list {
-    display: flex;
-    gap: 0.5rem;
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--color-rule);
-  }
-
-  .app-list span {
-    padding: 0.45rem 0.7rem;
-    border: 1px solid var(--color-rule);
-    border-radius: 5px;
-    background: var(--color-white);
-    color: var(--color-steel);
-    font-family: var(--font-mono);
-    font-size: 0.58rem;
-  }
-
-  .capture-visual__field {
-    width: min(78%, 560px);
-    margin: clamp(4rem, 9vw, 7rem) auto 0;
-    padding: var(--space-5);
-    border: 1px solid var(--color-rule);
-    background: var(--color-white);
-  }
-
-  .capture-visual__field small,
-  .refine-card span,
-  .remember-visual small,
-  .insight-stat span,
-  .insight-stat small {
-    color: var(--color-steel);
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.04em;
-  }
-
-  .capture-visual__field p {
-    margin: var(--space-4) 0 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.45rem, 3vw, 2.6rem);
-    font-weight: 540;
-    letter-spacing: -0.045em;
-    line-height: 1.15;
-  }
-
-  .capture-visual__field i {
-    display: inline-block;
-    width: 2px;
-    height: 1em;
-    margin-left: 0.12em;
-    transform: translateY(0.1em);
-    background: var(--color-ink);
-  }
-
-  .mini-flow {
-    position: absolute;
-    right: var(--space-5);
-    bottom: var(--space-5);
-    left: var(--space-5);
-    display: grid;
-    min-height: 64px;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: var(--space-3);
-    padding: 0.7rem 0.8rem;
-    border: 1px solid var(--color-rule);
-    border-radius: 15px;
-    background: #080a0b;
-    color: var(--color-ink);
-  }
-
-  .mini-flow b {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: repeating-linear-gradient(90deg, #f2f4f5 0 2px, transparent 2px 5px);
-  }
-
-  .mini-flow span {
-    font-size: 0.72rem;
-    font-weight: 700;
-  }
-
-  .mini-flow strong {
-    display: grid;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--color-ink);
-    color: var(--color-void);
-    font-size: 0.7rem;
-  }
-
-  .refine-visual {
-    display: grid;
-    min-height: 500px;
-    align-content: center;
-    gap: var(--space-4);
-    padding: clamp(1.5rem, 5vw, 4rem);
-    background: #121517;
-  }
-
-  .refine-card {
-    padding: var(--space-4);
-    border: 1px solid var(--color-rule);
-    background: var(--color-white);
-  }
-
-  .refine-card p {
-    margin: var(--space-3) 0 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.25rem, 2.3vw, 2.1rem);
-    font-weight: 520;
-    letter-spacing: -0.035em;
-    line-height: 1.2;
-  }
-
-  .refine-card--spoken {
-    margin-right: 12%;
-  }
-
-  .refine-card--written {
-    margin-left: 12%;
-    border-color: var(--color-ink);
-  }
-
-  .refine-arrow {
-    color: var(--color-steel);
-    font-family: var(--font-mono);
-    font-size: 1.2rem;
-    text-align: center;
-  }
-
   .remember-tags {
     display: flex;
     flex-wrap: wrap;
@@ -343,153 +147,14 @@ import SectionHeading from './SectionHeading.astro';
     font-size: 0.62rem;
   }
 
-  .remember-visual {
-    min-height: 440px;
-    padding: var(--space-4);
-  }
-
-  .remember-visual header,
-  .remember-visual > div,
-  .remember-visual footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-
-  .remember-visual header {
-    min-height: 64px;
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--color-ink);
-    font-size: 0.82rem;
-    font-weight: 750;
-  }
-
-  .remember-visual header b {
-    padding: 0.5rem 0.65rem;
-    border-radius: 5px;
-    background: var(--color-ink);
-    color: var(--color-void);
-    font-size: 0.62rem;
-  }
-
-  .remember-visual > div {
-    min-height: 88px;
-    padding-block: var(--space-3);
-    border-bottom: 1px solid var(--color-soft-rule);
-  }
-
-  .remember-visual strong {
-    font-size: 0.86rem;
-  }
-
-  .remember-visual footer {
-    justify-content: flex-end;
-    padding-top: var(--space-4);
-    color: var(--color-steel);
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-  }
-
-  .insights-visual {
-    display: grid;
-    min-height: 480px;
-    padding: clamp(1.5rem, 5vw, 4rem);
-    background: #060708;
-    color: var(--color-ink);
-  }
-
-  .insight-stat {
-    display: grid;
-    align-content: start;
-  }
-
-  .insight-stat span,
-  .insight-stat small {
-    color: #9aa3aa;
-  }
-
-  .insight-stat strong {
-    margin-top: var(--space-3);
-    font-family: var(--font-display);
-    font-size: clamp(3rem, 7vw, 6.5rem);
-    font-variation-settings: 'wdth' 82;
-    font-weight: 600;
-    letter-spacing: -0.07em;
-    line-height: 0.9;
-  }
-
-  .insight-stat small {
-    margin-top: var(--space-3);
-  }
-
-  .insight-bars {
-    display: flex;
-    height: 180px;
-    align-items: end;
-    gap: clamp(6px, 1vw, 12px);
-    margin-top: auto;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.28);
-  }
-
-  .insight-bars i {
-    width: 100%;
-    height: var(--h);
-    background: var(--color-ink);
-    opacity: 0.84;
-  }
-
-  .insight-meta {
-    display: flex;
-    justify-content: space-between;
-    padding-top: 0.7rem;
-    color: #9aa3aa;
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-  }
-
   @media (max-width: 900px) {
-    .chapter,
-    .chapter:nth-child(even) {
-      grid-template-columns: 1fr;
-      gap: var(--space-6);
-    }
-
-    .chapter:nth-child(even) .chapter__visual {
-      order: 2;
-    }
-
-    .chapter__copy {
-      max-width: 680px;
-    }
-  }
-
-  @media (max-width: 719px) {
     .chapters {
+      grid-template-columns: 1fr;
       margin-top: var(--space-8);
     }
 
-    .capture-visual,
-    .refine-visual,
-    .remember-visual,
-    .insights-visual {
-      min-height: 410px;
-    }
-
-    .app-list span:nth-child(n + 4) {
-      display: none;
-    }
-
-    .capture-visual__field {
-      width: calc(100% - 32px);
-    }
-
-    .refine-card--spoken {
-      margin-right: 5%;
-    }
-
-    .refine-card--written {
-      margin-left: 5%;
+    .chapter {
+      min-height: 0;
     }
   }
 </style>

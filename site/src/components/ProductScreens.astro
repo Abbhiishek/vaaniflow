@@ -1,0 +1,353 @@
+---
+import SectionHeading from './SectionHeading.astro';
+---
+
+<section class="product-screens" id="screens" aria-labelledby="screens-title">
+  <div class="shell">
+    <SectionHeading
+      id="screens-title"
+      label="Inside Vaani"
+      title="The product, exactly as it ships."
+      description="The desktop app keeps vocabulary, writing styles, reusable phrases, and everyday controls visible without turning dictation into another workspace to manage."
+    />
+
+    <article class="screen-story screen-story--dictionary" data-reveal="scale">
+      <div class="screen-copy">
+        <span class="screen-index">01 / Dictionary</span>
+        <h3>Your language remains recognizable.</h3>
+        <p>Save exact spellings and recurring terms, then let Vaani learn repeated names and acronyms as they appear in your dictation.</p>
+      </div>
+      <div class="screen-frame">
+        <img
+          src="/product/vaani-dictionary.png"
+          width="1679"
+          height="1095"
+          loading="lazy"
+          decoding="async"
+          alt="Vaani Dictionary screen for saving exact spellings and automatically learning repeated terms"
+        />
+      </div>
+    </article>
+
+    <div class="feature-plates">
+      <article class="feature-plate" data-reveal="left">
+        <div class="screen-copy">
+          <span class="screen-index">02 / Style</span>
+          <h3>One thought, shaped for the app in front of you.</h3>
+          <p>Choose how personal messages, work messages, email, and other writing should read after transcription.</p>
+        </div>
+        <div class="screen-frame">
+          <img
+            src="/product/vaani-styles.png"
+            width="1685"
+            height="1108"
+            loading="lazy"
+            decoding="async"
+            alt="Vaani Style screen showing formal, casual, and very casual writing treatments"
+          />
+        </div>
+      </article>
+
+      <article class="feature-plate feature-plate--offset" data-reveal="right" style="--reveal-delay: 60ms">
+        <div class="screen-copy">
+          <span class="screen-index">03 / Snippets</span>
+          <h3>Repeatable details stay ready on cue.</h3>
+          <p>Speak a saved phrase naturally and insert its full expansion while the surrounding dictation keeps its polish.</p>
+        </div>
+        <div class="screen-frame">
+          <img
+            src="/product/vaani-snippets.png"
+            width="1682"
+            height="1113"
+            loading="lazy"
+            decoding="async"
+            alt="Vaani Snippets screen for expanding spoken phrases into reusable blocks of text"
+          />
+        </div>
+      </article>
+    </div>
+
+    <div class="settings-heading" data-reveal>
+      <span class="screen-index">04 / Settings</span>
+      <div>
+        <h3>Set the behavior once. Keep speaking.</h3>
+        <p>Shortcut, language, appearance, startup, sound, and notification controls stay local and explicit.</p>
+      </div>
+    </div>
+
+    <div class="settings-strip" aria-label="Vaani settings screens">
+      <article class="settings-card" data-reveal style="--reveal-delay: 0ms">
+        <div class="settings-card__label"><span>General</span><small>Input and language</small></div>
+        <div class="screen-frame">
+          <img
+            src="/product/vaani-settings-general.png"
+            width="1670"
+            height="1027"
+            loading="lazy"
+            decoding="async"
+            alt="Vaani General settings for shortcut, microphone, dictation language, and app language"
+          />
+        </div>
+      </article>
+
+      <article class="settings-card" data-reveal style="--reveal-delay: 60ms">
+        <div class="settings-card__label"><span>Appearance</span><small>Window and color</small></div>
+        <div class="screen-frame">
+          <img
+            src="/product/vaani-settings-appearance.png"
+            width="1276"
+            height="900"
+            loading="lazy"
+            decoding="async"
+            alt="Vaani Appearance settings for window transparency and primary interface color"
+          />
+        </div>
+      </article>
+
+      <article class="settings-card" data-reveal style="--reveal-delay: 120ms">
+        <div class="settings-card__label"><span>System</span><small>Startup and sounds</small></div>
+        <div class="screen-frame">
+          <img
+            src="/product/vaani-settings-system.png"
+            width="1267"
+            height="1005"
+            loading="lazy"
+            decoding="async"
+            alt="Vaani System settings for startup behavior, flow-bar visibility, sounds, and notifications"
+          />
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .product-screens {
+    padding-block: var(--space-10);
+    border-top: 1px solid var(--color-rule);
+    background: var(--color-void);
+  }
+
+  .screen-story {
+    margin-top: var(--space-9);
+  }
+
+  .screen-copy {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.45fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+    margin-bottom: var(--space-5);
+  }
+
+  .screen-copy h3,
+  .settings-heading h3 {
+    margin: 0;
+    font-size: clamp(1.8rem, 3.5vw, 3.6rem);
+    font-variation-settings: 'wdth' 88;
+    font-weight: 600;
+    letter-spacing: -0.055em;
+    line-height: 0.98;
+  }
+
+  .screen-copy p {
+    grid-column: 2;
+    max-width: 680px;
+    margin: calc(var(--space-3) * -1) 0 0;
+    color: var(--color-steel);
+    font-size: 0.86rem;
+  }
+
+  .screen-index {
+    padding-top: 0.48rem;
+    color: var(--color-steel);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .screen-frame {
+    overflow: hidden;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.36);
+    transition:
+      border-color var(--duration-base) ease,
+      transform var(--duration-base) var(--ease-out-strong);
+  }
+
+  .screen-frame img {
+    width: 100%;
+    height: auto;
+    transition: transform var(--duration-base) var(--ease-out-strong);
+  }
+
+  .feature-plates {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: start;
+    margin-top: var(--space-10);
+  }
+
+  .feature-plate--offset {
+    margin-top: var(--space-8);
+  }
+
+  .feature-plate .screen-copy {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .feature-plate .screen-copy p {
+    grid-column: 1;
+    margin: 0;
+  }
+
+  .settings-heading {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.45fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+    margin-top: var(--space-10);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-ink);
+  }
+
+  .settings-heading > div {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .settings-heading p {
+    max-width: 650px;
+    margin: 0;
+    color: var(--color-steel);
+    font-size: 0.86rem;
+  }
+
+  .settings-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-7);
+  }
+
+  .settings-card__label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+    font-family: var(--font-mono);
+  }
+
+  .settings-card__label span {
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .settings-card__label small {
+    color: var(--color-steel);
+    font-size: 0.6rem;
+  }
+
+  :global(html.motion-ready) .settings-card[data-reveal] {
+    transform: translateY(14px);
+  }
+
+  :global(html.motion-ready) .settings-card[data-reveal].is-revealed {
+    transform: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .screen-frame:hover {
+      transform: translateY(-3px);
+      border-color: var(--color-steel);
+    }
+
+    .screen-frame:hover img {
+      transform: scale(1.008);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .feature-plates {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-plate--offset {
+      margin-top: 0;
+    }
+
+    .settings-strip {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .settings-card:last-child {
+      grid-column: 1 / -1;
+      width: calc(50% - var(--space-2));
+    }
+  }
+
+  @media (max-width: 719px) {
+    .screen-story {
+      margin-top: var(--space-8);
+    }
+
+    .screen-copy,
+    .settings-heading {
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+    }
+
+    .screen-copy p {
+      grid-column: 1;
+      margin: 0;
+    }
+
+    .screen-frame {
+      border-radius: var(--radius-sm);
+    }
+
+    .settings-strip {
+      width: calc(100vw - max(16px, calc((100vw - var(--shell)) / 2)));
+      grid-auto-columns: minmax(82vw, 1fr);
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      gap: var(--space-3);
+      margin-right: calc((100vw - var(--shell)) / -2);
+      padding-right: 16px;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scroll-padding-inline: 0 16px;
+      scroll-snap-type: inline proximity;
+      scrollbar-width: thin;
+    }
+
+    .settings-card,
+    .settings-card:last-child {
+      width: auto;
+      scroll-snap-align: start;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.motion-ready) .settings-card[data-reveal],
+    :global(html.motion-ready) .settings-card[data-reveal].is-revealed,
+    .screen-frame,
+    .screen-frame img,
+    .screen-frame:hover,
+    .screen-frame:hover img {
+      transform: none;
+    }
+
+    .screen-frame,
+    .screen-frame img {
+      transition-property: border-color;
+      transition-duration: 180ms;
+    }
+  }
+</style>

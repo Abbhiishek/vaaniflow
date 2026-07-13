@@ -78,11 +78,42 @@ const structuredData = {
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon-96x96.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script is:inline>document.documentElement.classList.add('motion-ready');</script>
     <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
     <title>{title}</title>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <slot />
+    <script is:inline type="module">
+      const initializeMotion = () => {
+        const revealNodes = [...document.querySelectorAll('[data-reveal]')];
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (reducedMotion || !('IntersectionObserver' in window)) {
+          revealNodes.forEach((node) => node.classList.add('is-revealed'));
+          return;
+        }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add('is-revealed');
+              observer.unobserve(entry.target);
+            });
+          },
+          { threshold: 0.12, rootMargin: '0px 0px -12% 0px' }
+        );
+
+        revealNodes.forEach((node) => observer.observe(node));
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeMotion, { once: true });
+      } else {
+        initializeMotion();
+      }
+    </script>
   </body>
 </html>

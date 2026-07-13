@@ -116,7 +116,7 @@ const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36
     border-radius: 100px;
     background: var(--color-ink);
     transform-origin: center;
-    animation: signal-build 700ms var(--delay) var(--ease-out) forwards;
+    opacity: 0.72;
   }
 
   .signal p {
@@ -142,7 +142,7 @@ const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36
     height: 132px;
     border-radius: 99px;
     background: var(--color-ink);
-    animation: cursor-scan 1.8s 350ms var(--ease-out) both;
+    opacity: 0;
   }
 
   .rail-cursor div {
@@ -174,7 +174,7 @@ const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36
     font-weight: 570;
     letter-spacing: -0.055em;
     line-height: 1.02;
-    animation: sentence-in 850ms 500ms var(--ease-out) both;
+    opacity: 0;
   }
 
   .sentence__caret {
@@ -182,6 +182,22 @@ const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36
     height: 3.4rem;
     margin-left: 0.35rem;
     background: var(--color-ink);
+    opacity: 0;
+  }
+
+  :global(.hero__rail.is-revealed) .signal__bars i {
+    animation: signal-build 700ms var(--delay) var(--ease-out-strong) forwards;
+  }
+
+  :global(.hero__rail.is-revealed) .rail-cursor__line {
+    animation: cursor-scan 1.8s 350ms var(--ease-in-out-strong) both;
+  }
+
+  :global(.hero__rail.is-revealed) .sentence p {
+    animation: sentence-in 850ms 500ms var(--ease-out-strong) both;
+  }
+
+  :global(.hero__rail.is-revealed) .sentence__caret {
     animation: caret-blink 1s 1.3s steps(1) infinite;
   }
 
@@ -219,12 +235,10 @@ const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36
     from {
       opacity: 0;
       transform: translateX(-18px);
-      filter: blur(5px);
     }
     to {
       opacity: 1;
       transform: translateX(0);
-      filter: blur(0);
     }
   }
 
@@ -321,8 +335,14 @@ const bars = [12, 24, 17, 40, 64, 32, 78, 50, 26, 58, 84, 44, 72, 28, 52, 20, 36
     .sentence__caret {
       opacity: 1;
       transform: none;
-      filter: none;
       animation: none;
+    }
+
+    .signal__bars i,
+    .rail-cursor__line,
+    .sentence p,
+    .sentence__caret {
+      opacity: 1;
     }
   }
 </style>

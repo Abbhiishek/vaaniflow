@@ -12,8 +12,8 @@ import { workflowSteps } from '../data/home';
   />
 
   <ol class="workflow__steps">
-    {workflowSteps.map((step) => (
-      <li>
+    {workflowSteps.map((step, index) => (
+      <li data-reveal style={`--reveal-delay: ${index * 60}ms`}>
         <div class="workflow__number">
           <span>{step.number}</span>
           <b>{step.action}</b>
@@ -29,7 +29,7 @@ import { workflowSteps } from '../data/home';
     ))}
   </ol>
 
-  <p class="workflow__aside">
+  <p class="workflow__aside" data-reveal style={`--reveal-delay: ${workflowSteps.length * 60}ms`}>
     Prefer not to hold a shortcut? A quick tap starts hands-free recording; use the shortcut again when you are finished.
   </p>
 </section>

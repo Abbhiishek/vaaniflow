@@ -13,42 +13,21 @@ import { siteConfig } from '../config';
       description="Vaani is the Windows application. VaaniFlow is the open-source project behind it. The app listens on demand, processes the result, then returns you to the work already open."
     />
 
-    <figure class="workspace" aria-labelledby="workspace-caption">
-      <div class="workspace__chrome" aria-hidden="true">
-        <span></span><span></span><span></span>
-        <p>Project notes — Draft</p>
-        <i>Windows</i>
-      </div>
-
-      <div class="workspace__body" aria-hidden="true">
-        <aside>
-          <p>Notes</p>
-          <span class="is-active">Project brief</span>
-          <span>Weekly review</span>
-          <span>Follow-up</span>
-          <span>Ideas</span>
-        </aside>
-
-        <div class="editor">
-          <p class="editor__label">Project brief</p>
-          <h3>Next steps</h3>
-          <div class="editor__copy">
-            <span class="line line--wide"></span>
-            <span class="line line--medium"></span>
-            <p>Could you send the revised plan tomorrow morning?<i></i></p>
-            <span class="line line--short"></span>
-          </div>
+    <figure class="workspace" aria-labelledby="workspace-caption" data-reveal="scale">
+      <div class="workspace__frame">
+        <div class="workspace__chrome" aria-hidden="true">
+          <div><span></span><span></span><span></span></div>
+          <p>Vaani · Insights</p>
+          <i>Windows</i>
         </div>
-
-        <div class="flow-bar">
-          <div class="flow-bar__mark">
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <div>
-            <strong>Ready to insert</strong>
-            <small>42 words · 18 seconds</small>
-          </div>
-          <b>✓</b>
+        <div class="workspace__image">
+          <img
+            src="/product/vaani-insights.png"
+            width="1125"
+            height="741"
+            decoding="async"
+            alt="Vaani Insights dashboard showing local dictation totals, time saved, consistency, and recent voice activity"
+          />
         </div>
       </div>
 
@@ -59,7 +38,7 @@ import { siteConfig } from '../config';
 
     <div class="fact-grid" aria-label="Vaani product facts">
       {productFacts.map((fact, index) => (
-        <article>
+        <article data-reveal style={`--reveal-delay: ${index * 60}ms`}>
           <span>{String(index + 1).padStart(2, '0')}</span>
           <h3>{fact.title}</h3>
           <p>{fact.description}</p>
@@ -67,7 +46,7 @@ import { siteConfig } from '../config';
       ))}
     </div>
 
-    <p class="product-proof__note">
+    <p class="product-proof__note" data-reveal style={`--reveal-delay: ${productFacts.length * 60}ms`}>
       {siteConfig.productName} has no hosted VaaniFlow account or sync service. Provider requests go directly to the Azure OpenAI resource you configure.
     </p>
   </div>
@@ -82,25 +61,36 @@ import { siteConfig } from '../config';
 
   .workspace {
     margin: var(--space-8) 0 0;
+  }
+
+  .workspace__frame {
     overflow: hidden;
-    border: 1px solid var(--color-ink);
+    border: 1px solid var(--color-rule);
     border-radius: var(--radius-md);
     background: var(--color-white);
     box-shadow: var(--shadow-soft);
+    transition:
+      border-color var(--duration-base) ease,
+      transform var(--duration-base) var(--ease-out-strong);
   }
 
   .workspace__chrome {
     display: grid;
     min-height: 54px;
-    grid-template-columns: repeat(3, 10px) 1fr auto;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-3);
     padding: 0 var(--space-4);
     border-bottom: 1px solid var(--color-rule);
     background: var(--color-elevated);
   }
 
-  .workspace__chrome > span {
+  .workspace__chrome > div {
+    display: flex;
+    gap: 8px;
+  }
+
+  .workspace__chrome span {
     width: 9px;
     height: 9px;
     border: 1px solid var(--color-steel);
@@ -117,200 +107,26 @@ import { siteConfig } from '../config';
   }
 
   .workspace__chrome p {
-    padding-left: var(--space-3);
+    text-align: center;
   }
 
-  .workspace__body {
-    position: relative;
-    display: grid;
-    min-height: 600px;
-    grid-template-columns: minmax(170px, 0.24fr) 1fr;
-    background:
-      linear-gradient(90deg, rgba(242, 244, 245, 0.035) 1px, transparent 1px),
-      var(--color-white);
-    background-size: 18% 100%;
+  .workspace__chrome i {
+    justify-self: end;
   }
 
-  aside {
-    display: grid;
-    align-content: start;
-    gap: 0.25rem;
-    padding: var(--space-5) var(--space-4);
-    border-right: 1px solid var(--color-rule);
-    background: #121416;
+  .workspace__image {
+    overflow: hidden;
+    background: #101315;
   }
 
-  aside p {
-    margin: 0 0 var(--space-3);
-    color: var(--color-steel);
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  aside span {
-    padding: 0.72rem 0.85rem;
-    border-radius: 6px;
-    color: var(--color-steel);
-    font-size: 0.76rem;
-    font-weight: 650;
-  }
-
-  aside .is-active {
-    background: var(--color-white);
-    color: var(--color-ink);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.035);
-  }
-
-  .editor {
-    width: min(720px, calc(100% - 64px));
-    margin: 0 auto;
-    padding: clamp(4rem, 8vw, 7.5rem) 0 9rem;
-  }
-
-  .editor__label {
-    margin-bottom: var(--space-3);
-    color: var(--color-steel);
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .editor h3 {
-    margin-bottom: var(--space-5);
-    font-size: clamp(2.4rem, 5vw, 4.8rem);
-    font-variation-settings: 'wdth' 88;
-    font-weight: 610;
-    letter-spacing: -0.06em;
-    line-height: 0.95;
-  }
-
-  .editor__copy {
-    display: grid;
-    gap: 1.25rem;
-  }
-
-  .line {
-    display: block;
-    height: 1px;
-    background: var(--color-rule);
-  }
-
-  .line--wide {
-    width: 88%;
-  }
-
-  .line--medium {
-    width: 67%;
-  }
-
-  .line--short {
-    width: 42%;
-  }
-
-  .editor__copy p {
-    max-width: 620px;
-    margin: var(--space-3) 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.65rem, 3.2vw, 3.15rem);
-    font-variation-settings: 'wdth' 92;
-    font-weight: 520;
-    letter-spacing: -0.045em;
-    line-height: 1.1;
-  }
-
-  .editor__copy p i {
-    display: inline-block;
-    width: 3px;
-    height: 1em;
-    margin-left: 0.15em;
-    transform: translateY(0.12em);
-    background: var(--color-ink);
-    animation: caret 1s steps(1) infinite;
-  }
-
-  .flow-bar {
-    position: absolute;
-    bottom: var(--space-5);
-    left: 50%;
-    display: grid;
-    width: min(420px, calc(100% - 40px));
-    min-height: 76px;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: var(--space-3);
-    padding: 0.9rem 1rem;
-    transform: translateX(-50%);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 18px;
-    background: #080a0b;
-    color: var(--color-ink);
-    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.5);
-  }
-
-  .flow-bar__mark {
-    display: flex;
-    width: 42px;
-    height: 42px;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    border-radius: 12px;
-    background: var(--color-ink);
-  }
-
-  .flow-bar__mark span {
-    width: 2px;
-    height: var(--height, 16px);
-    border-radius: 3px;
-    background: var(--color-void);
-  }
-
-  .flow-bar__mark span:nth-child(1),
-  .flow-bar__mark span:nth-child(5) {
-    height: 8px;
-  }
-
-  .flow-bar__mark span:nth-child(2),
-  .flow-bar__mark span:nth-child(4) {
-    height: 18px;
-  }
-
-  .flow-bar__mark span:nth-child(3) {
-    height: 27px;
-  }
-
-  .flow-bar > div:nth-child(2) {
-    display: grid;
-    gap: 0.2rem;
-  }
-
-  .flow-bar strong {
-    font-size: 0.78rem;
-  }
-
-  .flow-bar small {
-    color: #aeb6bb;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-  }
-
-  .flow-bar b {
-    display: grid;
-    width: 32px;
-    height: 32px;
-    place-content: center;
-    border-radius: 50%;
-    background: var(--color-ink);
-    color: var(--color-void);
-    font-size: 0.76rem;
+  .workspace__image img {
+    width: 100%;
+    height: auto;
+    transition: transform var(--duration-base) var(--ease-out-strong);
   }
 
   figcaption {
-    padding: var(--space-4);
-    border-top: 1px solid var(--color-rule);
+    padding: var(--space-4) 0 0;
     color: var(--color-steel);
     font-size: 0.78rem;
   }
@@ -377,9 +193,14 @@ import { siteConfig } from '../config';
     margin: var(--space-5) 0 0 auto;
   }
 
-  @keyframes caret {
-    50% {
-      opacity: 0;
+  @media (hover: hover) and (pointer: fine) {
+    .workspace__frame:hover {
+      transform: translateY(-3px);
+      border-color: var(--color-steel);
+    }
+
+    .workspace__frame:hover img {
+      transform: scale(1.008);
     }
   }
 
@@ -400,32 +221,24 @@ import { siteConfig } from '../config';
   @media (max-width: 719px) {
     .workspace {
       margin-top: var(--space-7);
+    }
+
+    .workspace__frame {
       border-radius: var(--radius-sm);
     }
 
     .workspace__chrome {
-      grid-template-columns: repeat(3, 8px) 1fr;
+      min-height: 46px;
+      grid-template-columns: auto 1fr;
       padding-inline: var(--space-3);
     }
 
-    .workspace__chrome i,
-    aside {
+    .workspace__chrome p {
+      text-align: right;
+    }
+
+    .workspace__chrome i {
       display: none;
-    }
-
-    .workspace__body {
-      min-height: 520px;
-      grid-template-columns: 1fr;
-      background: var(--color-white);
-    }
-
-    .editor {
-      width: calc(100% - 40px);
-      padding-top: var(--space-7);
-    }
-
-    .flow-bar {
-      bottom: var(--space-3);
     }
 
     .fact-grid {
@@ -440,18 +253,19 @@ import { siteConfig } from '../config';
       border-bottom: 1px solid var(--color-rule);
     }
 
-    .fact-grid article:nth-child(-n + 2) {
-      border-bottom: 1px solid var(--color-rule);
-    }
-
     .fact-grid h3 {
       margin-top: var(--space-3);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .editor__copy p i {
-      animation: none;
+    .workspace__frame,
+    .workspace__image img,
+    .workspace__frame:hover,
+    .workspace__frame:hover img {
+      transform: none;
+      transition-property: border-color;
+      transition-duration: 180ms;
     }
   }
 </style>

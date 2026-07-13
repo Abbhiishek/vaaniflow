@@ -13,44 +13,44 @@ import { localData, providerData } from '../data/home';
       inverse
     />
 
-    <div class="privacy-flow" aria-label="How data moves through Vaani">
-      <div class="flow-node">
+    <div class="privacy-flow" aria-label="How data moves through Vaani" data-reveal="scale">
+      <div class="flow-node" data-reveal style="--reveal-delay: 0ms">
         <span>01</span>
         <strong>Microphone</strong>
         <small>Recorded on demand</small>
       </div>
-      <div class="flow-connector"><span>audio</span><i>→</i></div>
-      <div class="flow-node flow-node--provider">
+      <div class="flow-connector" data-reveal style="--reveal-delay: 60ms"><span>audio</span><i>→</i></div>
+      <div class="flow-node flow-node--provider" data-reveal style="--reveal-delay: 120ms">
         <span>02</span>
         <strong>Your Whisper deployment</strong>
         <small>Transcribes the audio</small>
       </div>
-      <div class="flow-connector"><span>transcript</span><i>→</i></div>
-      <div class="flow-node">
+      <div class="flow-connector" data-reveal style="--reveal-delay: 180ms"><span>transcript</span><i>→</i></div>
+      <div class="flow-node" data-reveal style="--reveal-delay: 240ms">
         <span>03</span>
         <strong>Vaani</strong>
         <small>Processes locally</small>
       </div>
-      <div class="flow-connector"><span>text</span><i>→</i></div>
-      <div class="flow-node">
+      <div class="flow-connector" data-reveal style="--reveal-delay: 300ms"><span>text</span><i>→</i></div>
+      <div class="flow-node" data-reveal style="--reveal-delay: 360ms">
         <span>04</span>
         <strong>Current text field</strong>
         <small>Inserted at the cursor</small>
       </div>
     </div>
 
-    <p class="optional-flow">
+    <p class="optional-flow" data-reveal style="--reveal-delay: 420ms">
       Optional path: transcript → your configured language-model deployment → cleaned or styled text → Vaani
     </p>
 
     <div class="privacy-lists">
-      <article>
+      <article data-reveal style="--reveal-delay: 480ms">
         <h3>Stays on this device</h3>
         <ul>
           {localData.map((item) => <li>{item}</li>)}
         </ul>
       </article>
-      <article>
+      <article data-reveal style="--reveal-delay: 540ms">
         <h3>Sent when the feature runs</h3>
         <ul>
           {providerData.map((item) => <li>{item}</li>)}
@@ -58,7 +58,7 @@ import { localData, providerData } from '../data/home';
       </article>
     </div>
 
-    <p class="privacy__disclosure">
+    <p class="privacy__disclosure" data-reveal style="--reveal-delay: 600ms">
       Azure availability, rate limits, and usage charges are governed by the Azure resource you connect. VaaniFlow does not proxy these requests or add a hosted subscription.
     </p>
   </div>
@@ -132,6 +132,20 @@ import { localData, providerData } from '../data/home';
     font-style: normal;
   }
 
+  :global(html.motion-ready) .flow-connector[data-reveal] {
+    opacity: 0;
+    transform: translateX(-10px);
+    transition:
+      opacity var(--duration-reveal) var(--ease-out-strong),
+      transform var(--duration-reveal) var(--ease-in-out-strong);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  :global(html.motion-ready) .flow-connector[data-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+  }
+
   .optional-flow {
     margin: var(--space-4) 0 0;
     padding-left: var(--space-4);
@@ -199,12 +213,28 @@ import { localData, providerData } from '../data/home';
     .flow-connector i {
       transform: rotate(90deg);
     }
+
+    :global(html.motion-ready) .flow-connector[data-reveal] {
+      transform: translateY(-10px);
+    }
+
+    :global(html.motion-ready) .flow-connector[data-reveal].is-revealed {
+      transform: none;
+    }
   }
 
   @media (max-width: 719px) {
     .privacy-lists {
       grid-template-columns: 1fr;
       gap: var(--space-6);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.motion-ready) .flow-node[data-reveal],
+    :global(html.motion-ready) .flow-connector[data-reveal],
+    :global(html.motion-ready) .flow-connector[data-reveal].is-revealed {
+      transform: none;
     }
   }
 </style>
