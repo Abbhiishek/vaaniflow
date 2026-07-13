@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { dictionarySettingsPatch, migrateLegacyDictionary } = require('./dictionary');
 const { migrateSnippets, snippetSettingsPatch } = require('./snippets');
+const { gatewayDefaults } = require('./gateway-defaults');
 
 const SETTINGS_SCHEMA_VERSION = 1;
 
@@ -45,11 +46,13 @@ class JsonFile {
 }
 
 const CONFIG_DEFAULTS = {
+  providerMode: 'builtin',
   baseUrl: '',
   apiKey: '',
   apiVersion: '2024-10-21',
   whisperDeployment: '',
-  llmDeployment: ''
+  llmDeployment: '',
+  overrideConfigured: false
 };
 
 class ConfigurationError extends Error {
@@ -74,8 +77,13 @@ class EditableConfig {
     const normalized = {};
     for (const [key, fallback] of Object.entries(CONFIG_DEFAULTS)) {
       const current = source[key];
-      normalized[key] = typeof current === 'string' ? current.trim() : fallback;
+      normalized[key] = typeof fallback === 'boolean'
+        ? !!current
+        : (typeof current === 'string' ? current.trim() : fallback);
     }
+    const inferredLegacyOverride = !Object.prototype.hasOwnProperty.call(source, 'providerMode')
+      && !!(String(source.apiKey || '').trim() || String(source.baseUrl || '').trim());
+    normalized.providerMode = normalized.providerMode === 'override' || inferredLegacyOverride ? 'override' : 'builtin';
     if (!normalized.apiVersion) normalized.apiVersion = CONFIG_DEFAULTS.apiVersion;
     return normalized;
   }
@@ -113,13 +121,17 @@ class EditableConfig {
   info() {
     const config = this.load();
     const missing = [];
-    if (!config.baseUrl) missing.push('baseUrl');
-    if (!config.apiKey) missing.push('apiKey');
-    if (!config.whisperDeployment) missing.push('whisperDeployment');
+    if (config.providerMode === 'override') {
+      if (!config.baseUrl) missing.push('baseUrl');
+      if (!config.whisperDeployment) missing.push('whisperDeployment');
+      if (!config.overrideConfigured) missing.push('saved provider secret');
+    }
     return {
       path: this.filePath,
       configured: missing.length === 0,
       missing,
+      providerMode: config.providerMode,
+      overrideConfigured: config.overrideConfigured,
       whisperDeployment: config.whisperDeployment,
       llmDeployment: config.llmDeployment,
       apiVersion: config.apiVersion
@@ -129,6 +141,7 @@ class EditableConfig {
 
 const SETTINGS_DEFAULTS = {
   settingsSchemaVersion: 0,
+  installationId: '',
   onboardingCompleted: false,
   language: 'auto',
   appLanguage: 'en',
@@ -198,6 +211,7 @@ class Store {
 
     const legacy = this.settingsFile.data;
     this.configFile = new EditableConfig(path.join(userDataDir, 'config.json'), {
+      providerMode: legacy.apiKey || legacy.baseUrl ? 'override' : 'builtin',
       baseUrl: String(legacy.baseUrl || ''),
       apiKey: String(legacy.apiKey || ''),
       apiVersion: String(legacy.azureApiVersion || CONFIG_DEFAULTS.apiVersion),
@@ -207,6 +221,10 @@ class Store {
 
     const previousSchemaVersion = Math.max(0, Number(this.settingsFile.data.settingsSchemaVersion) || 0);
     let migrated = false;
+    if (!this.settingsFile.data.installationId) {
+      this.settingsFile.data.installationId = crypto.randomUUID();
+      migrated = true;
+    }
     for (const key of LEGACY_CONFIG_KEYS) {
       if (Object.prototype.hasOwnProperty.call(this.settingsFile.data, key)) {
         delete this.settingsFile.data[key];
@@ -260,13 +278,17 @@ class Store {
 
   runtimeSettings() {
     const config = this.configFile.load();
+    const gateway = gatewayDefaults();
     return {
       ...this.settings,
+      ...gateway,
+      providerMode: config.providerMode,
       baseUrl: config.baseUrl,
       apiKey: config.apiKey,
       azureApiVersion: config.apiVersion,
       model: config.whisperDeployment,
-      chatModel: config.llmDeployment
+      chatModel: config.llmDeployment,
+      overrideConfigured: config.overrideConfigured
     };
   }
 

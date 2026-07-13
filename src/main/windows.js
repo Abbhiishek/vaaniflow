@@ -37,6 +37,8 @@ function createOverlayWindow(getPosition = () => 'bottom-center') {
       preload: PRELOAD,
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
       backgroundThrottling: false,
       devTools: !app.isPackaged
     }
@@ -73,6 +75,8 @@ function createOverlayGuideWindow() {
       preload: PRELOAD,
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
       devTools: !app.isPackaged
     }
   });
@@ -114,6 +118,8 @@ function createDashboardWindow(iconPath, settings) {
       preload: PRELOAD,
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
       devTools: !app.isPackaged
     }
   });

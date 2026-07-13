@@ -33,6 +33,9 @@ jobs:
         run: npm test
 
       - name: Build installer
+        env:
+          VAANI_GATEWAY_URL: ${{ secrets.VAANI_GATEWAY_URL }}
+          VAANI_GATEWAY_ACCESS_KEY: ${{ secrets.VAANI_GATEWAY_ACCESS_KEY }}
         run: npm run dist
 
       - name: Verify updater artifacts

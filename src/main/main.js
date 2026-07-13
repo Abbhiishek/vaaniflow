@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { app, BrowserWindow, ipcMain, clipboard, shell, Menu, Notification, nativeImage, screen } = require('electron');
 const { Store } = require('./store');
 const { Injector } = require('./injector');
@@ -10,6 +11,7 @@ const { createOverlayWindow, createOverlayGuideWindow, createDashboardWindow, po
 const { nearestOverlayPosition, normalizeOverlayPosition } = require('./overlay-position');
 const { createTray } = require('./tray');
 const { testConnection } = require('./transcriber');
+const { gatewayIsConfigured, saveProviderProfile } = require('./gateway-client');
 const { Updater } = require('./updater');
 const { SystemAudioMute } = require('./system-audio');
 const { crossedWordMilestones, milestoneMessage } = require('./milestones');
@@ -22,6 +24,7 @@ const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'vaani.png');
 // Windows upgrades the existing install and refreshes its shortcut/taskbar icon.
 const APP_USER_MODEL_ID = appUserModelId(app.isPackaged);
 const MANAGES_LOGIN_ITEM = shouldManageLoginItem(app.isPackaged, IS_SMOKE);
+const TRUSTED_RENDERER_ROOT = pathToFileURL(path.join(__dirname, '..', 'renderer') + path.sep).href;
 
 app.setName(PRODUCT_NAME);
 
@@ -55,6 +58,14 @@ function migrateLegacyUserData(userDataDir) {
       fs.cpSync(failedAudioSource, failedAudioDestination, { recursive: true });
     }
   }
+}
+
+function isTrustedWebContents(webContents) {
+  try { return String(webContents?.getURL?.() || '').startsWith(TRUSTED_RENDERER_ROOT); } catch { return false; }
+}
+
+function assertTrustedIpc(event) {
+  if (!isTrustedWebContents(event?.sender)) throw new Error('Rejected IPC from an untrusted renderer');
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -181,8 +192,11 @@ if (!app.requestSingleInstanceLock()) {
     // Allow mic access for our own renderers.
     const { session: electronSession } = require('electron');
     electronSession.defaultSession.setPermissionRequestHandler((wc, permission, cb) => {
-      cb(permission === 'media');
+      cb(permission === 'media' && isTrustedWebContents(wc));
     });
+    electronSession.defaultSession.setPermissionCheckHandler((wc, permission) => (
+      permission === 'media' && isTrustedWebContents(wc)
+    ));
 
     overlayWin = createOverlayWindow(() => store.settings.overlayPosition);
     overlayGuideWin = createOverlayGuideWindow();
@@ -312,8 +326,9 @@ if (!app.requestSingleInstanceLock()) {
 
     ipcMain.handle('session:state', () => session.uiState());
 
-    ipcMain.handle('settings:test', () => {
+    ipcMain.handle('settings:test', (event) => {
       try {
+        assertTrustedIpc(event);
         return testConnection(store.runtimeSettings());
       } catch (err) {
         return { ok: false, message: err.message };
@@ -321,29 +336,55 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     // ---- editable Azure config ----
-    ipcMain.handle('config:info', () => {
+    ipcMain.handle('config:info', (event) => {
       try {
-        return { ok: true, ...store.configInfo() };
+        assertTrustedIpc(event);
+        const info = store.configInfo();
+        const gatewayReady = gatewayIsConfigured(store.runtimeSettings());
+        const missing = gatewayReady ? info.missing : ['built-in server provisioning', ...info.missing];
+        return { ok: true, ...info, configured: gatewayReady && info.configured, gatewayReady, missing };
       } catch (err) {
         return { ok: false, path: store.configPath, message: err.message };
       }
     });
-    ipcMain.handle('config:get', () => {
+    ipcMain.handle('config:get', (event) => {
       try {
-        return { ok: true, config: store.getConfig() };
+        assertTrustedIpc(event);
+        const config = store.getConfig();
+        return { ok: true, config: { ...config, apiKey: '' } };
       } catch (err) {
         return { ok: false, message: err.message };
       }
     });
-    ipcMain.handle('config:set', (e, patch) => {
+    ipcMain.handle('config:set', async (e, patch) => {
       try {
-        return { ok: true, config: store.updateConfig(patch) };
+        assertTrustedIpc(e);
+        const current = store.getConfig();
+        const next = patch && typeof patch === 'object' ? { ...patch } : {};
+        const providerMode = next.providerMode === 'override' ? 'override' : 'builtin';
+        if (providerMode === 'override') {
+          const profile = {
+            provider: 'azure-openai',
+            baseUrl: String(next.baseUrl || current.baseUrl || '').trim(),
+            apiKey: String(next.apiKey || '').trim(),
+            apiVersion: String(next.apiVersion || current.apiVersion || '2024-10-21').trim(),
+            whisperDeployment: String(next.whisperDeployment || current.whisperDeployment || '').trim(),
+            llmDeployment: String(next.llmDeployment ?? current.llmDeployment ?? '').trim()
+          };
+          await saveProviderProfile(profile, { ...store.runtimeSettings(), providerMode });
+          next.overrideConfigured = true;
+        }
+        next.providerMode = providerMode;
+        next.apiKey = '';
+        const config = store.updateConfig(next);
+        return { ok: true, config: { ...config, apiKey: '' } };
       } catch (err) {
         return { ok: false, message: err.message };
       }
     });
-    ipcMain.handle('config:open', async () => {
+    ipcMain.handle('config:open', async (event) => {
       try {
+        assertTrustedIpc(event);
         const configPath = store.ensureConfigFile();
         const message = await shell.openPath(configPath);
         return message ? { ok: false, message } : { ok: true, path: store.configPath };
@@ -371,7 +412,10 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle('clipboard:copy', (e, text) => clipboard.writeText(String(text ?? '')));
     ipcMain.handle('dictation:toggle', () => session.toggle());
     ipcMain.handle('app:openExternal', (e, url) => {
-      if (/^https?:\/\//i.test(String(url))) shell.openExternal(url);
+      try {
+        const target = new URL(String(url));
+        if (target.protocol === 'https:') shell.openExternal(target.toString());
+      } catch {}
     });
 
     // ---- overlay ----

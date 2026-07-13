@@ -1779,6 +1779,14 @@ body.settings-mode #content { overflow: hidden; padding: 0; background: var(--bg
 /* provider and account forms */
 .provider-card, .account-card { padding: 22px; }
 .provider-status-line { display: grid; grid-template-columns: 8px auto minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.provider-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.provider-mode-switch label { display: flex; gap: 10px; min-width: 0; padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255, 255, 255, 0.018); cursor: pointer; }
+.provider-mode-switch label:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 58%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.provider-mode-switch input { margin-top: 2px; accent-color: var(--accent); }
+.provider-mode-switch span { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.provider-mode-switch strong { color: var(--text); font-size: 10.5px; }
+.provider-mode-switch small, .provider-mode-copy { color: var(--text-dim); font-size: 9.5px; line-height: 1.45; }
+.provider-mode-copy { margin: 0 0 2px; padding: 14px; border: 1px dashed var(--border); border-radius: 10px; }
 #provider-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #777a7f; box-shadow: 0 0 0 4px rgba(119, 122, 127, 0.08); }
 #provider-status-dot.ok { background: #7fb893; box-shadow: 0 0 0 4px rgba(127, 184, 147, 0.08); }
 #provider-status-dot.fail { background: #d98a8a; box-shadow: 0 0 0 4px rgba(217, 138, 138, 0.08); }

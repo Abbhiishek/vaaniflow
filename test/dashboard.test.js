@@ -70,14 +70,16 @@ test('settings uses standalone routed category pages including appearance', () =
   assert.match(html, /id="set-accentColor"/);
 });
 
-test('provider settings are form based and unbranded', () => {
+test('provider settings expose managed Azure and override modes', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'dashboard', 'dashboard.html'), 'utf8');
   const provider = html.match(/<div class="settings-page" data-settings-page="provider"[\s\S]*?<div class="settings-page" data-settings-page="account"/i)?.[0] || '';
   assert.match(provider, /id="provider-base-url"/);
   assert.match(provider, /id="provider-api-key"/);
   assert.match(provider, /id="provider-whisper"/);
   assert.match(provider, /id="provider-llm"/);
-  assert.doesNotMatch(provider, /Azure/i);
+  assert.match(provider, /managed Azure deployments/i);
+  assert.match(provider, /value="builtin"/);
+  assert.match(provider, /value="override"/);
 });
 
 test('general settings support custom shortcuts and refreshing all microphones', () => {

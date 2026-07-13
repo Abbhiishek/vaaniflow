@@ -589,12 +589,17 @@
           </div>
 
           <div class="settings-page" data-settings-page="provider" hidden>
-            <header class="settings-page-header"><span class="settings-eyebrow">Private connection</span><h1>Provider</h1><p>Connect Vaani to your speech and language deployments. Credentials remain in a local configuration file.</p></header>
+            <header class="settings-page-header"><span class="settings-eyebrow">Private connection</span><h1>Provider</h1><p>Use Vaani's managed Azure deployments or override them with your own compatible deployments.</p></header>
             <form id="provider-form" class="settings-card provider-card">
               <div class="provider-status-line"><span id="provider-status-dot"></span><strong id="config-status">Checking configuration…</strong><span id="provider-status-detail"></span></div>
-              <div class="settings-form-grid">
+              <div class="provider-mode-switch" role="radiogroup" aria-label="Provider mode">
+                <label><input id="provider-mode-builtin" type="radio" name="provider-mode" value="builtin" checked /><span><strong>Use built-in</strong><small>Vaani's server-owned Azure deployments through the Worker.</small></span></label>
+                <label><input id="provider-mode-override" type="radio" name="provider-mode" value="override" /><span><strong>Override</strong><small>Your provider key is encrypted and stored by the Worker.</small></span></label>
+              </div>
+              <p id="provider-builtin-copy" class="provider-mode-copy">No model credentials are required on this device.</p>
+              <div id="provider-override-fields" class="settings-form-grid" hidden>
                 <label class="settings-field full"><span>Base URL</span><input id="provider-base-url" type="url" placeholder="https://your-resource.example.com" autocomplete="url" required /><small>The endpoint that receives transcription and language requests.</small></label>
-                <label class="settings-field full"><span>API key</span><span class="secret-input"><input id="provider-api-key" type="password" placeholder="Enter your API key" autocomplete="off" required /><button id="provider-key-toggle" type="button">Show</button></span><small>Stored only in Vaani's local config file.</small></label>
+                <label class="settings-field full"><span>API key</span><span class="secret-input"><input id="provider-api-key" type="password" placeholder="Enter your API key" autocomplete="off" /><button id="provider-key-toggle" type="button">Show</button></span><small>Sent over HTTPS once, encrypted by the Worker, and never returned to the app.</small></label>
                 <label class="settings-field"><span>Whisper deployment</span><input id="provider-whisper" type="text" placeholder="whisper" autocomplete="off" required /></label>
                 <label class="settings-field"><span>LLM deployment</span><input id="provider-llm" type="text" placeholder="Optional" autocomplete="off" /><small>Used to clean up and format transcripts.</small></label>
               </div>

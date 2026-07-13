@@ -12,6 +12,8 @@ function isDevToolsShortcut(input = {}) {
 }
 
 function hardenWindowForProduction(win, isPackaged) {
+  win.webContents.setWindowOpenHandler?.(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event) => event.preventDefault());
   if (!isPackaged) return;
 
   win.removeMenu();

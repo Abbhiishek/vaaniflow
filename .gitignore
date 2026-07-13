@@ -3,3 +3,8 @@ dist/
 .astro/
 .vercel/
 *.log
+server/node_modules/
+server/.dev.vars
+server/.wrangler/
+server/worker-configuration.d.ts
+src/main/gateway-config.generated.json
