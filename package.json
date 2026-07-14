@@ -1,8 +1,8 @@
 {
   "name": "vaaniflow",
   "productName": "Vaani",
-  "version": "1.0.7",
-  "description": "Voice dictation for Windows with server-owned Azure OpenAI deployments and optional provider overrides.",
+  "version": "1.0.8",
+  "description": "Voice dictation for Windows powered by your own Azure OpenAI Whisper and optional chat deployments.",
   "main": "src/main/main.js",
   "author": "Abhishek Kushwaha",
   "license": "MIT",
@@ -11,14 +11,12 @@
     "url": "https://github.com/Abbhiishek/vaaniflow.git"
   },
   "scripts": {
-    "start": "node scripts/start-with-gateway.js",
+    "start": "electron .",
     "smoke": "electron . --smoke",
     "test": "node --test",
     "server:dev": "npm --prefix server run dev",
     "server:check": "npm --prefix server run check",
     "server:deploy": "npm --prefix server run deploy",
-    "gateway:config": "node scripts/generate-gateway-config.js",
-    "predist": "npm run gateway:config",
     "verify:release": "node scripts/verify-release.js",
     "dist": "electron-builder --win --publish never"
   },
@@ -29,6 +27,7 @@
     "files": [
       "src/**/*",
       "assets/**/*",
+      "!assets/*.exe",
       "package.json"
     ],
     "afterPack": "scripts/after-pack.js",

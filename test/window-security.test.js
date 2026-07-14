@@ -70,3 +70,11 @@ test('all renderer windows enable Chromium sandboxing', () => {
   assert.equal((source.match(/nodeIntegration:\s*false/g) || []).length, 3);
   assert.equal((source.match(/contextIsolation:\s*true/g) || []).length, 3);
 });
+
+test('production fuses do not require an unbundled browser V8 snapshot', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'after-pack.js'), 'utf8');
+  assert.match(source, /LoadBrowserProcessSpecificV8Snapshot\]:\s*false/);
+  assert.doesNotMatch(source, /LoadBrowserProcessSpecificV8Snapshot\]:\s*true/);
+});

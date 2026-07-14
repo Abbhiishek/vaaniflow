@@ -25,13 +25,11 @@ test('creates config.json and migrates legacy connection settings', (t) => {
   const store = new Store(dir);
   const config = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'));
   assert.deepEqual(config, {
-    providerMode: 'override',
     baseUrl: 'https://speech.openai.azure.com',
     apiKey: 'secret',
     apiVersion: '2024-10-21',
     whisperDeployment: 'whisper-prod',
-    llmDeployment: 'gpt40',
-    overrideConfigured: false
+    llmDeployment: 'gpt40'
   });
   assert.equal(store.settings.apiKey, undefined);
   assert.equal(store.settings.model, undefined);
@@ -58,31 +56,19 @@ test('updates provider configuration through the store', (t) => {
   const dir = tempUserData(t);
   const store = new Store(dir);
   store.updateConfig({
-    providerMode: 'override',
     baseUrl: 'https://provider.example.com',
     apiKey: 'local-key',
     whisperDeployment: 'speech-prod',
-    llmDeployment: 'language-prod',
-    overrideConfigured: false
+    llmDeployment: 'language-prod'
   });
 
   assert.deepEqual(store.getConfig(), {
-    providerMode: 'override',
     baseUrl: 'https://provider.example.com',
     apiKey: 'local-key',
     apiVersion: '2024-10-21',
     whisperDeployment: 'speech-prod',
-    llmDeployment: 'language-prod',
-    overrideConfigured: false
+    llmDeployment: 'language-prod'
   });
-});
-
-test('creates a stable installation identity for signed server requests', (t) => {
-  const dir = tempUserData(t);
-  const first = new Store(dir).settings.installationId;
-  const second = new Store(dir).settings.installationId;
-  assert.match(first, /^[0-9a-f-]{36}$/i);
-  assert.equal(second, first);
 });
 
 test('provider updates can repair an invalid config file', (t) => {

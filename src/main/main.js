@@ -11,7 +11,6 @@ const { createOverlayWindow, createOverlayGuideWindow, createDashboardWindow, po
 const { nearestOverlayPosition, normalizeOverlayPosition } = require('./overlay-position');
 const { createTray } = require('./tray');
 const { testConnection } = require('./transcriber');
-const { gatewayIsConfigured, saveProviderProfile } = require('./gateway-client');
 const { Updater } = require('./updater');
 const { SystemAudioMute } = require('./system-audio');
 const { crossedWordMilestones, milestoneMessage } = require('./milestones');
@@ -339,10 +338,7 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle('config:info', (event) => {
       try {
         assertTrustedIpc(event);
-        const info = store.configInfo();
-        const gatewayReady = gatewayIsConfigured(store.runtimeSettings());
-        const missing = gatewayReady ? info.missing : ['built-in server provisioning', ...info.missing];
-        return { ok: true, ...info, configured: gatewayReady && info.configured, gatewayReady, missing };
+        return { ok: true, ...store.configInfo() };
       } catch (err) {
         return { ok: false, path: store.configPath, message: err.message };
       }
@@ -350,34 +346,15 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle('config:get', (event) => {
       try {
         assertTrustedIpc(event);
-        const config = store.getConfig();
-        return { ok: true, config: { ...config, apiKey: '' } };
+        return { ok: true, config: store.getConfig() };
       } catch (err) {
         return { ok: false, message: err.message };
       }
     });
-    ipcMain.handle('config:set', async (e, patch) => {
+    ipcMain.handle('config:set', (event, patch) => {
       try {
-        assertTrustedIpc(e);
-        const current = store.getConfig();
-        const next = patch && typeof patch === 'object' ? { ...patch } : {};
-        const providerMode = next.providerMode === 'override' ? 'override' : 'builtin';
-        if (providerMode === 'override') {
-          const profile = {
-            provider: 'azure-openai',
-            baseUrl: String(next.baseUrl || current.baseUrl || '').trim(),
-            apiKey: String(next.apiKey || '').trim(),
-            apiVersion: String(next.apiVersion || current.apiVersion || '2024-10-21').trim(),
-            whisperDeployment: String(next.whisperDeployment || current.whisperDeployment || '').trim(),
-            llmDeployment: String(next.llmDeployment ?? current.llmDeployment ?? '').trim()
-          };
-          await saveProviderProfile(profile, { ...store.runtimeSettings(), providerMode });
-          next.overrideConfigured = true;
-        }
-        next.providerMode = providerMode;
-        next.apiKey = '';
-        const config = store.updateConfig(next);
-        return { ok: true, config: { ...config, apiKey: '' } };
+        assertTrustedIpc(event);
+        return { ok: true, config: store.updateConfig(patch) };
       } catch (err) {
         return { ok: false, message: err.message };
       }

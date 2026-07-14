@@ -4,7 +4,6 @@
 'use strict';
 const { DEFAULT_AZURE_API_VERSION, normalizeAzureEndpoint } = require('./transcriber');
 const { entriesFromSettings } = require('./dictionary');
-const { isGatewayProvider, chatViaGateway, warmupGateway } = require('./gateway-client');
 
 const BASE_PROMPT = [
   'Format a raw speech-to-text transcript for insertion into the user\'s current app.',
@@ -59,7 +58,6 @@ const STYLE_HINTS = {
 };
 
 function polishConfig(settings) {
-  if (isGatewayProvider(settings)) return { gateway: true };
   const base = normalizeAzureEndpoint(settings.baseUrl);
   const apiKey = String(settings.apiKey || '').trim();
   const deployment = String(settings.chatModel || '').trim();
@@ -255,14 +253,12 @@ async function polishText(text, settings, style) {
   const timeoutMs = Math.max(2, Number(settings.polishTimeoutSec) || 8) * 1000;
 
   try {
-    const res = config.gateway
-      ? await chatViaGateway(body, settings)
-      : await fetch(config.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...config.headers },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs)
-      });
+    const res = await fetch(config.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...config.headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const choice = data?.choices?.[0];
@@ -284,10 +280,8 @@ async function polishText(text, settings, style) {
   }
 }
 
-// The gateway health request also warms its TLS connection while the user speaks.
-function polishWarmup(settings) {
-  if (isGatewayProvider(settings)) warmupGateway(settings);
-}
+// Whisper warmup already opens the same Azure resource connection.
+function polishWarmup() {}
 
 module.exports = {
   polishText,

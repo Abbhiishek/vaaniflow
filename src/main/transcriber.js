@@ -1,10 +1,5 @@
 // Azure OpenAI Whisper transcription client.
 'use strict';
-const {
-  isGatewayProvider,
-  transcribeViaGateway,
-  warmupGateway
-} = require('./gateway-client');
 
 const DEFAULT_AZURE_API_VERSION = '2024-10-21';
 
@@ -68,13 +63,6 @@ async function transcribe(wavBuffer, settings, opts = {}) {
 }
 
 async function transcribeOnce(wavBuffer, settings, { prompt } = {}) {
-  if (isGatewayProvider(settings)) {
-    try {
-      return await transcribeViaGateway(wavBuffer, settings, { prompt });
-    } catch (err) {
-      throw new TranscriptionError(err.message, { status: err.status, transient: err.transient });
-    }
-  }
   const config = resolveTranscriptionConfig(settings);
   const form = buildTranscriptionForm(wavBuffer, settings, prompt);
   const timeoutMs = Math.max(5, Number(settings.timeoutSec) || 60) * 1000;
@@ -149,11 +137,6 @@ function createSilentWav(durationMs = 500) {
 async function testConnection(settings) {
   let config;
   try {
-    if (isGatewayProvider(settings)) {
-      await transcribeOnce(createSilentWav(), settings);
-      const label = settings.providerMode === 'override' ? 'server-side override' : 'built-in Azure provider';
-      return { ok: true, message: `Connected to the ${label}.` };
-    }
     config = resolveTranscriptionConfig(settings);
     await transcribeOnce(createSilentWav(), settings);
     return { ok: true, message: `Connected to Azure deployment "${config.deployment}".` };
@@ -164,10 +147,6 @@ async function testConnection(settings) {
 
 // Open the TCP/TLS connection while the user is still speaking.
 function warmup(settings) {
-  if (isGatewayProvider(settings)) {
-    warmupGateway(settings);
-    return;
-  }
   let config;
   try {
     config = resolveTranscriptionConfig(settings);

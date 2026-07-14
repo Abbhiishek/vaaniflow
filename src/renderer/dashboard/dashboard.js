@@ -1238,12 +1238,10 @@ async function refreshConfigInfo() {
     detail.textContent = `Missing ${configInfo.missing.join(', ')}`;
     dot.className = 'fail';
   } else {
-    status.textContent = configInfo.providerMode === 'override' ? 'Override ready' : 'Built-in provider ready';
-    detail.textContent = configInfo.providerMode === 'override'
-      ? (configInfo.llmDeployment
-        ? `${configInfo.whisperDeployment} · ${configInfo.llmDeployment}`
-        : `${configInfo.whisperDeployment} · transcription only`)
-      : 'Managed Azure OpenAI';
+    status.textContent = 'Provider ready';
+    detail.textContent = configInfo.llmDeployment
+      ? `${configInfo.whisperDeployment} · ${configInfo.llmDeployment}`
+      : `${configInfo.whisperDeployment} · transcription only`;
     dot.className = 'ok';
   }
   return configInfo;
@@ -1257,50 +1255,24 @@ async function loadProviderConfig() {
     return null;
   }
   const config = result.config || {};
-  const mode = config.providerMode === 'override' ? 'override' : 'builtin';
-  $(`#provider-mode-${mode}`).checked = true;
   $('#provider-base-url').value = config.baseUrl || '';
-  $('#provider-api-key').value = '';
-  $('#provider-api-key').placeholder = config.overrideConfigured
-    ? 'Saved securely — enter only to replace'
-    : 'Enter your API key';
+  $('#provider-api-key').value = config.apiKey || '';
   $('#provider-whisper').value = config.whisperDeployment || '';
   $('#provider-llm').value = config.llmDeployment || '';
-  syncProviderMode(config.overrideConfigured);
   return config;
-}
-
-function selectedProviderMode() {
-  return $('input[name="provider-mode"]:checked')?.value === 'override' ? 'override' : 'builtin';
-}
-
-function syncProviderMode(overrideConfigured = !!configInfo?.overrideConfigured) {
-  const override = selectedProviderMode() === 'override';
-  $('#provider-override-fields').hidden = !override;
-  $('#provider-builtin-copy').hidden = override;
-  for (const input of $('#provider-override-fields').querySelectorAll('input')) input.disabled = !override;
-  $('#provider-base-url').required = override;
-  $('#provider-whisper').required = override;
-  $('#provider-api-key').required = override && !overrideConfigured;
 }
 
 window.vaani.onConfigChanged(async () => {
   await loadProviderConfig();
   await refreshConfigInfo();
-  $('#provider-api-key').value = '';
-  $('#provider-api-key').placeholder = result.config?.overrideConfigured
-    ? 'Saved securely — enter only to replace'
-    : 'Enter your API key';
   $('#test-result').textContent = 'Reloaded changes from the local config file.';
   $('#test-result').className = 'ok';
 });
 
 async function saveProviderConfig({ announce = true } = {}) {
-  syncProviderMode();
   const form = $('#provider-form');
   if (!form.reportValidity()) return null;
   const result = await window.vaani.setConfig({
-    providerMode: selectedProviderMode(),
     baseUrl: $('#provider-base-url').value.trim(),
     apiKey: $('#provider-api-key').value.trim(),
     whisperDeployment: $('#provider-whisper').value.trim(),
@@ -1313,9 +1285,7 @@ async function saveProviderConfig({ announce = true } = {}) {
   }
   await refreshConfigInfo();
   if (announce) {
-    $('#test-result').textContent = selectedProviderMode() === 'override'
-      ? 'Override encrypted and saved by the Vaani server.'
-      : 'Built-in provider selected.';
+    $('#test-result').textContent = 'Provider saved locally.';
     $('#test-result').className = 'ok';
   }
   return result.config;
@@ -1325,10 +1295,6 @@ $('#provider-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   await saveProviderConfig();
 });
-
-for (const input of $$('input[name="provider-mode"]')) {
-  input.addEventListener('change', () => syncProviderMode());
-}
 
 $('#provider-key-toggle').addEventListener('click', () => {
   const input = $('#provider-api-key');

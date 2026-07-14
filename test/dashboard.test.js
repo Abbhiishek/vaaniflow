@@ -70,16 +70,15 @@ test('settings uses standalone routed category pages including appearance', () =
   assert.match(html, /id="set-accentColor"/);
 });
 
-test('provider settings expose managed Azure and override modes', () => {
+test('provider settings are form based and use local credentials', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'dashboard', 'dashboard.html'), 'utf8');
   const provider = html.match(/<div class="settings-page" data-settings-page="provider"[\s\S]*?<div class="settings-page" data-settings-page="account"/i)?.[0] || '';
   assert.match(provider, /id="provider-base-url"/);
   assert.match(provider, /id="provider-api-key"/);
   assert.match(provider, /id="provider-whisper"/);
   assert.match(provider, /id="provider-llm"/);
-  assert.match(provider, /managed Azure deployments/i);
-  assert.match(provider, /value="builtin"/);
-  assert.match(provider, /value="override"/);
+  assert.match(provider, /Stored only in Vaani's local config file/i);
+  assert.doesNotMatch(provider, /server-owned|value="builtin"|value="override"/i);
 });
 
 test('general settings support custom shortcuts and refreshing all microphones', () => {

@@ -7,7 +7,6 @@ const {
   createSilentWav
 } = require('../src/main/transcriber');
 const { polishConfig } = require('../src/main/polisher');
-const { gatewayIsConfigured, isGatewayProvider } = require('../src/main/gateway-client');
 
 test('builds an Azure OpenAI Whisper deployment request', () => {
   const config = resolveTranscriptionConfig({
@@ -63,15 +62,4 @@ test('uses the configured LLM deployment on the same Azure resource', () => {
     'https://speech-prod.openai.azure.com/openai/deployments/gpt40/chat/completions?api-version=2024-10-21'
   );
   assert.deepEqual(config.headers, { 'api-key': 'azure-secret' });
-});
-
-test('recognizes provisioned built-in and override server modes', () => {
-  assert.equal(isGatewayProvider({ providerMode: 'builtin' }), true);
-  assert.equal(isGatewayProvider({ providerMode: 'override' }), true);
-  assert.equal(isGatewayProvider({}), false);
-  assert.equal(gatewayIsConfigured({
-    gatewayUrl: 'https://server.example.com',
-    gatewayAccessKey: 'secret',
-    installationId: 'installation-123456'
-  }), true);
 });
