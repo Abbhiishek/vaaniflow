@@ -21,7 +21,9 @@ module.exports = async function afterPack(context) {
     // browser_v8_context_snapshot.bin. Enabling this fuse without that file
     // terminates the browser process with 0x80000003 before the app can start.
     [FuseV1Options.LoadBrowserProcessSpecificV8Snapshot]: false,
-    [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
+    // Every renderer is loaded from file:// inside app.asar. Disabling this
+    // fuse makes Electron 43 reject those URLs with ERR_FILE_NOT_FOUND.
+    [FuseV1Options.GrantFileProtocolExtraPrivileges]: true,
     [FuseV1Options.WasmTrapHandlers]: true
   });
 };

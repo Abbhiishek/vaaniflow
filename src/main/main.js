@@ -446,6 +446,16 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   async function runSmokeTest() {
+    const rendererReady = async (win, selector) => {
+      if (!win || win.isDestroyed()) return false;
+      try {
+        return await win.webContents.executeJavaScript(
+          `Boolean(window.vaani && document.querySelector(${JSON.stringify(selector)}))`
+        );
+      } catch {
+        return false;
+      }
+    };
     const results = {
       settingsLoaded: !!store.settings,
       overlayCreated: !!overlayWin && !overlayWin.isDestroyed(),
@@ -457,8 +467,9 @@ if (!app.requestSingleInstanceLock()) {
     } catch {}
     // let renderers finish loading so load errors surface
     await new Promise((r) => setTimeout(r, 2500));
-    results.overlayLoaded = overlayWin && !overlayWin.webContents.isLoading();
-    results.dashboardLoaded = dashboardWin && !dashboardWin.webContents.isLoading();
+    results.overlayLoaded = await rendererReady(overlayWin, '#pill');
+    results.overlayGuideLoaded = await rendererReady(overlayGuideWin, '#pin-guide');
+    results.dashboardLoaded = await rendererReady(dashboardWin, '#app');
     console.log('SMOKE_RESULTS ' + JSON.stringify(results));
     const ok = Object.values(results).every(Boolean);
     console.log(ok ? 'SMOKE_OK' : 'SMOKE_FAIL');

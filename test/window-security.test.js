@@ -78,3 +78,21 @@ test('production fuses do not require an unbundled browser V8 snapshot', () => {
   assert.match(source, /LoadBrowserProcessSpecificV8Snapshot\]:\s*false/);
   assert.doesNotMatch(source, /LoadBrowserProcessSpecificV8Snapshot\]:\s*true/);
 });
+
+test('production fuses keep file renderers loadable from app.asar', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'after-pack.js'), 'utf8');
+  assert.match(source, /GrantFileProtocolExtraPrivileges\]:\s*true/);
+  assert.doesNotMatch(source, /GrantFileProtocolExtraPrivileges\]:\s*false/);
+});
+
+test('smoke test verifies renderer DOM instead of only load completion', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'main.js'), 'utf8');
+  assert.match(source, /executeJavaScript/);
+  assert.match(source, /rendererReady\(overlayWin, '#pill'\)/);
+  assert.match(source, /rendererReady\(overlayGuideWin, '#pin-guide'\)/);
+  assert.match(source, /rendererReady\(dashboardWin, '#app'\)/);
+});
