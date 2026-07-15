@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
@@ -12,11 +13,13 @@ if (!executable || !fs.existsSync(executable)) {
   process.exit(1);
 }
 
-const result = spawnSync(executable, ['--smoke'], {
+const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vaani-packaged-smoke-'));
+const result = spawnSync(executable, [`--user-data-dir=${userDataDir}`, '--smoke'], {
   encoding: 'utf8',
   windowsHide: true,
   timeout: 30000
 });
+try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch {}
 
 if (result.stdout) process.stdout.write(result.stdout);
 if (result.stderr) process.stderr.write(result.stderr);
