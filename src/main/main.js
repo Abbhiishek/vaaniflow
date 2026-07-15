@@ -223,6 +223,7 @@ if (!app.requestSingleInstanceLock()) {
     hotkeys.on('space', () => session.onSpace());
     hotkeys.on('escape', () => session.onEscape());
     hotkeys.on('intrude', () => session.onIntrude());
+    hotkeys.on('paste-last', () => session.pasteLastTranscript());
     hotkeys.start(store.settings.hotkey);
 
     tray = createTray({

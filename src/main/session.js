@@ -64,6 +64,7 @@ class Session extends EventEmitter {
     this.sessionWavs = []; // raw chunk audio, kept so a failed dictation is recoverable
     this.stoppedAt = 0; // per-stage latency telemetry
     this.runtimeSettings = null; // config.json + regular app settings, fixed for this dictation
+    this.pastingLastTranscript = false;
   }
 
   _sendOverlay(payload) {
@@ -197,6 +198,35 @@ class Session extends EventEmitter {
   toggle() {
     if (this.state === 'idle') this._startRecording('handsfree');
     else if (this.state === 'recording') this.stop();
+  }
+
+  async pasteLastTranscript() {
+    if (this.state !== 'idle' || this.pastingLastTranscript) return false;
+    const entry = this.store.history?.[0];
+    const text = String(entry?.text || '');
+    if (!text) {
+      this._sendOverlay({ type: 'error', message: 'No dictation history yet' });
+      return false;
+    }
+
+    this.pastingLastTranscript = true;
+    try {
+      const appInfo = await this.injector.foreground().catch(() => null);
+      const result = await this.injector.pasteText(text, {
+        restoreClipboard: !!this.store.settings?.restoreClipboard,
+        shiftPaste: this.injector.isTerminalApp(appInfo)
+      });
+      if (!result.ok) console.error('paste last transcript failed:', result.message);
+      const words = Number(entry.words) || text.trim().split(/\s+/u).filter(Boolean).length;
+      this._sendOverlay({ type: 'done', words, pasted: result.ok, recovered: true });
+      return result.ok;
+    } catch (err) {
+      console.error('paste last transcript failed:', err.message);
+      this._sendOverlay({ type: 'error', message: 'Could not paste the last dictation' });
+      return false;
+    } finally {
+      this.pastingLastTranscript = false;
+    }
   }
 
   _startRecording(mode) {

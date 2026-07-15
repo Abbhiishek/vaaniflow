@@ -1,5 +1,5 @@
 // Global keyboard listening via uiohook-napi (N-API — works in Electron without rebuild).
-// Emits: 'primary-down', 'primary-up', 'space', 'escape'.
+// Emits: 'primary-down', 'primary-up', 'space', 'escape', 'paste-last'.
 // Falls back to Electron globalShortcut (toggle-only) if the native hook can't load.
 'use strict';
 const { EventEmitter } = require('events');
@@ -33,6 +33,8 @@ const MODIFIER_ACCELERATORS = {
   Alt: 'Alt',
   Meta: 'Super'
 };
+
+const PASTE_LAST_HOTKEY_ID = 'custom:Control+Alt+Shift+KeyV';
 
 function customKeyName(code) {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
@@ -124,7 +126,9 @@ function resolveHotkey(id) {
 }
 
 function isValidHotkeyId(id) {
-  return !!resolveHotkey(id);
+  // The recovery shortcut remains available even when the recording shortcut
+  // is customized, so it cannot also be selected for dictation.
+  return id !== PASTE_LAST_HOTKEY_ID && !!resolveHotkey(id);
 }
 
 // Each preset is a list of "slots"; a slot is satisfied when any of its keycodes is held.
@@ -150,13 +154,14 @@ class Hotkeys extends EventEmitter {
     this.hotkeyId = 'ctrl+win';
     this.pressed = new Set();
     this.comboActive = false;
+    this.pasteLastActive = false;
     this.started = false;
     this.usingFallback = !uIOhook;
     this.suspended = false;
   }
 
   start(hotkeyId) {
-    this.hotkeyId = hotkeyId || this.hotkeyId;
+    if (isValidHotkeyId(hotkeyId)) this.hotkeyId = hotkeyId;
     if (this.started) return;
     this.started = true;
 
@@ -181,6 +186,7 @@ class Hotkeys extends EventEmitter {
     this.hotkeyId = hotkeyId;
     this.pressed.clear();
     this.comboActive = false;
+    this.pasteLastActive = false;
     if (this.usingFallback) {
       globalShortcut.unregisterAll();
       this._registerFallback();
@@ -192,6 +198,7 @@ class Hotkeys extends EventEmitter {
     this.suspended = !!suspended;
     this.pressed.clear();
     this.comboActive = false;
+    this.pasteLastActive = false;
   }
 
   _combo() {
@@ -206,12 +213,21 @@ class Hotkeys extends EventEmitter {
     return this._combo().slots.some((slot) => slot.includes(code));
   }
 
+  _pasteLastComboSatisfied() {
+    return resolveHotkey(PASTE_LAST_HOTKEY_ID).slots
+      .every((slot) => slot.some((code) => code != null && this.pressed.has(code)));
+  }
+
   _onKey(code, down) {
     if (this.suspended) return;
     if (down) {
       // uiohook repeats keydown while held; only track transitions
       if (this.pressed.has(code)) return;
       this.pressed.add(code);
+      if (!this.pasteLastActive && this._pasteLastComboSatisfied()) {
+        this.pasteLastActive = true;
+        return;
+      }
       if (!this.comboActive && this._isComboKey(code) && this._comboSatisfied()) {
         this.comboActive = true;
         this.emit('primary-down');
@@ -226,7 +242,15 @@ class Hotkeys extends EventEmitter {
         }
       }
     } else {
+      const releasesPasteLast = this.pasteLastActive
+        && resolveHotkey(PASTE_LAST_HOTKEY_ID).slots.at(-1).includes(code);
       this.pressed.delete(code);
+      if (releasesPasteLast) {
+        this.pasteLastActive = false;
+        // Paste after V is released so the physical key cannot leak into the
+        // destination or interfere with the injected Ctrl+V.
+        this.emit('paste-last');
+      }
       if (this.comboActive && this._isComboKey(code) && !this._comboSatisfied()) {
         this.comboActive = false;
         this.emit('primary-up');
@@ -242,6 +266,11 @@ class Hotkeys extends EventEmitter {
   _registerFallback() {
     const acc = this._combo().fallbackAccelerator || 'F9';
     try {
+      const recoveryRegistered = globalShortcut.register('Control+Alt+Shift+V', () => {
+        this.emit('paste-last');
+      });
+      if (!recoveryRegistered) console.error('globalShortcut fallback could not register paste-last shortcut');
+
       const registered = globalShortcut.register(acc, () => {
         this.emit('primary-down');
         setTimeout(() => this.emit('primary-up'), 10);
@@ -267,6 +296,7 @@ module.exports = {
   uiohookAvailable: !!uIOhook,
   hotkeyLabel,
   isValidHotkeyId,
+  PASTE_LAST_HOTKEY_ID,
   parseCustomHotkey,
   resolveHotkey
 };

@@ -1716,6 +1716,17 @@ body.settings-mode #content { overflow: hidden; padding: 0; background: var(--bg
 .setting-icon-button:hover { border-color: var(--focus); color: var(--text); }
 .setting-inline-button.recording { border-color: color-mix(in srgb, var(--accent) 36%, transparent); background: color-mix(in srgb, var(--accent) 10%, var(--bg-hover)); color: var(--accent); }
 .shortcut-recording { color: color-mix(in srgb, var(--accent) 78%, #999ca1); font-size: 9px; text-align: right; }
+.setting-shortcut {
+  justify-self: end;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-dim);
+  font: 500 9.5px/1 'Bahnschrift', 'Segoe UI', sans-serif;
+  white-space: nowrap;
+}
 .mic-refreshing svg { animation: mic-refresh-spin 650ms linear infinite; }
 .settings-save-note { margin-top: 10px; color: var(--text-dim); font-size: 9.5px; text-align: right; }
 .settings-section { margin-top: 26px; }
@@ -1833,7 +1844,8 @@ body.settings-mode #content { overflow: hidden; padding: 0; background: var(--bg
   .setting-row { grid-template-columns: 34px minmax(0, 1fr); }
   .setting-control-stack,
   .setting-row > .setting-control-group,
-  .setting-row > .setting-control { grid-column: 2; }
+  .setting-row > .setting-control,
+  .setting-shortcut { grid-column: 2; justify-self: start; }
   .appearance-layout { grid-template-columns: 1fr; }
   .appearance-preview { min-height: 240px; }
 }

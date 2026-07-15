@@ -70,6 +70,40 @@ test('Space locks push-to-talk into hands-free until the shortcut is pressed aga
   session.onAudioError('test complete');
 });
 
+test('paste-last inserts the newest completed transcript into the focused app', async () => {
+  const pasted = [];
+  const messages = [];
+  const session = new Session({
+    store: {
+      history: [{ text: 'Recovered dictation', words: 2 }],
+      settings: { restoreClipboard: true }
+    },
+    injector: {
+      foreground: async () => ({ app: 'Code' }),
+      isTerminalApp: () => false,
+      pasteText: async (text, options) => {
+        pasted.push({ text, options });
+        return { ok: true };
+      }
+    },
+    getOverlay: () => ({
+      isDestroyed: () => false,
+      webContents: { send: (channel, payload) => messages.push({ channel, payload }) }
+    }),
+    getRuntimeSettings: () => ({}),
+    systemAudio: null
+  });
+
+  assert.equal(await session.pasteLastTranscript(), true);
+  assert.deepEqual(pasted, [{
+    text: 'Recovered dictation',
+    options: { restoreClipboard: true, shiftPaste: false }
+  }]);
+  assert.deepEqual(messages.at(-1).payload, {
+    type: 'done', words: 2, pasted: true, recovered: true
+  });
+});
+
 test('music mute is applied after the start cue and restored before processing', async () => {
   const actions = [];
   const overlay = { isDestroyed: () => false, webContents: { send: (channel, payload) => actions.push(payload.type) } };

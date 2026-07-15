@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Hotkeys, hotkeyLabel, isValidHotkeyId, resolveHotkey } = require('../src/main/hotkeys');
+const { Hotkeys, hotkeyLabel, isValidHotkeyId, resolveHotkey, PASTE_LAST_HOTKEY_ID } = require('../src/main/hotkeys');
 
 test('accepts and labels recorded custom shortcuts', () => {
   const id = 'custom:Control+Alt+KeyK';
@@ -11,6 +11,36 @@ test('accepts and labels recorded custom shortcuts', () => {
   assert.equal(isValidHotkeyId('custom:Shift+KeyK'), false, 'typing shortcuts require Ctrl, Alt, or Win');
   assert.equal(isValidHotkeyId('custom:Alt+KeyV'), true);
   assert.equal(hotkeyLabel('custom:Alt+KeyV'), 'Alt + V');
+});
+
+test('reserved recovery shortcut emits paste-last instead of dictation', () => {
+  const hotkeys = new Hotkeys();
+  const combo = resolveHotkey(PASTE_LAST_HOTKEY_ID);
+  const events = [];
+  hotkeys.on('primary-down', () => events.push('down'));
+  hotkeys.on('paste-last', () => events.push('paste-last'));
+
+  for (const slot of combo.slots) hotkeys._onKey(slot[0], true);
+  assert.deepEqual(events, [], 'recovery waits for the V key to be released');
+  hotkeys._onKey(combo.slots.at(-1)[0], false);
+
+  assert.deepEqual(events, ['paste-last']);
+  assert.equal(isValidHotkeyId(PASTE_LAST_HOTKEY_ID), false);
+});
+
+test('recovery shortcut cancels a recording shortcut prefix before pasting', () => {
+  const hotkeys = new Hotkeys();
+  hotkeys.hotkeyId = 'ctrl+alt';
+  const combo = resolveHotkey(PASTE_LAST_HOTKEY_ID);
+  const events = [];
+  hotkeys.on('primary-down', () => events.push('down'));
+  hotkeys.on('intrude', () => events.push('intrude'));
+  hotkeys.on('paste-last', () => events.push('paste-last'));
+
+  for (const slot of combo.slots) hotkeys._onKey(slot[0], true);
+  hotkeys._onKey(combo.slots.at(-1)[0], false);
+
+  assert.deepEqual(events, ['down', 'intrude', 'paste-last']);
 });
 
 test('Alt+V emits live press and release events', () => {
