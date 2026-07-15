@@ -48,7 +48,7 @@ Add your provider details from **Settings → Provider**, or edit the configurat
 }
 ```
 
-`llmDeployment` is optional and is only needed for AI cleanup and style formatting. The default shortcut is `Ctrl + Win`: hold it while speaking, then release to transcribe and paste. If the result lands in the wrong window, focus the intended field and press `Ctrl + Alt + Shift + V` to paste the newest completed dictation again.
+`llmDeployment` is optional and is only needed for AI cleanup and style formatting. The default shortcut is `Ctrl + Win`: hold it while speaking, then release to transcribe and paste. If the result lands in the wrong window, focus the intended field and press `Alt + Shift + Z` to paste the newest completed dictation again.
 
 ## Privacy
 

@@ -34,7 +34,7 @@ const MODIFIER_ACCELERATORS = {
   Meta: 'Super'
 };
 
-const PASTE_LAST_HOTKEY_ID = 'custom:Control+Alt+Shift+KeyV';
+const PASTE_LAST_HOTKEY_ID = 'custom:Alt+Shift+KeyZ';
 
 function customKeyName(code) {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
@@ -247,7 +247,7 @@ class Hotkeys extends EventEmitter {
       this.pressed.delete(code);
       if (releasesPasteLast) {
         this.pasteLastActive = false;
-        // Paste after V is released so the physical key cannot leak into the
+        // Paste after Z is released so the physical key cannot leak into the
         // destination or interfere with the injected Ctrl+V.
         this.emit('paste-last');
       }
@@ -266,7 +266,8 @@ class Hotkeys extends EventEmitter {
   _registerFallback() {
     const acc = this._combo().fallbackAccelerator || 'F9';
     try {
-      const recoveryRegistered = globalShortcut.register('Control+Alt+Shift+V', () => {
+      const recoveryAcc = resolveHotkey(PASTE_LAST_HOTKEY_ID).fallbackAccelerator;
+      const recoveryRegistered = globalShortcut.register(recoveryAcc, () => {
         this.emit('paste-last');
       });
       if (!recoveryRegistered) console.error('globalShortcut fallback could not register paste-last shortcut');

@@ -21,7 +21,7 @@ test('reserved recovery shortcut emits paste-last instead of dictation', () => {
   hotkeys.on('paste-last', () => events.push('paste-last'));
 
   for (const slot of combo.slots) hotkeys._onKey(slot[0], true);
-  assert.deepEqual(events, [], 'recovery waits for the V key to be released');
+  assert.deepEqual(events, [], 'recovery waits for the Z key to be released');
   hotkeys._onKey(combo.slots.at(-1)[0], false);
 
   assert.deepEqual(events, ['paste-last']);
@@ -30,14 +30,16 @@ test('reserved recovery shortcut emits paste-last instead of dictation', () => {
 
 test('recovery shortcut cancels a recording shortcut prefix before pasting', () => {
   const hotkeys = new Hotkeys();
-  hotkeys.hotkeyId = 'ctrl+alt';
+  hotkeys.hotkeyId = 'right-alt';
   const combo = resolveHotkey(PASTE_LAST_HOTKEY_ID);
+  const rightAltCode = resolveHotkey('right-alt').slots[0][0];
   const events = [];
   hotkeys.on('primary-down', () => events.push('down'));
   hotkeys.on('intrude', () => events.push('intrude'));
   hotkeys.on('paste-last', () => events.push('paste-last'));
 
-  for (const slot of combo.slots) hotkeys._onKey(slot[0], true);
+  hotkeys._onKey(rightAltCode, true);
+  for (const slot of combo.slots.slice(1)) hotkeys._onKey(slot[0], true);
   hotkeys._onKey(combo.slots.at(-1)[0], false);
 
   assert.deepEqual(events, ['down', 'intrude', 'paste-last']);

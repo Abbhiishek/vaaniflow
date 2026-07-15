@@ -47,10 +47,10 @@ public static class VaaniInjector {
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 
-    // Release modifiers and V if the user still has the recovery chord held,
+    // Release modifiers and Z if the user still has the recovery chord held,
     // so the injected Ctrl+V is not turned into another shortcut or stray key.
     public static void ReleaseModifiers() {
-        ushort[] mods = { 0x10, 0x11, 0x12, 0x56, 0x5B, 0x5C, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5 };
+        ushort[] mods = { 0x10, 0x11, 0x12, 0x5A, 0x5B, 0x5C, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5 };
         foreach (var vk in mods) {
             if ((GetAsyncKeyState(vk) & 0x8000) != 0) Send(new[] { Key(vk, true) });
         }

@@ -86,7 +86,7 @@ test('general settings support custom shortcuts and refreshing all microphones',
   const html = fs.readFileSync(path.join(root, 'dashboard.html'), 'utf8');
   const js = fs.readFileSync(path.join(root, 'dashboard.js'), 'utf8');
   assert.match(html, /id="shortcut-record"/);
-  assert.match(html, /Paste last dictation[\s\S]*Ctrl \+ Alt \+ Shift \+ V/);
+  assert.match(html, /Paste last dictation[\s\S]*Alt \+ Shift \+ Z/);
   assert.match(js, /custom:\$\{\[\.\.\.modifiers, event\.code\]\.join\('\+'\)\}/);
   assert.match(html, /id="mic-refresh"/);
   assert.match(js, /navigator\.mediaDevices\.addEventListener\('devicechange'/);
